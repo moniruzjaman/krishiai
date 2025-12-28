@@ -1,0 +1,9 @@
+{
+  "name": "Krishi AI",
+  "description": "বাংলাদেশের কৃষকদের জন্য এআই চালিত আধুনিক কৃষি সমাধান। রোগ নির্ণয়, আবহাওয়া এবং সরকারি পরামর্শের সমন্বিত প্ল্যাটফর্ম।",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="google-site-verification" content="K1DITFnkuR0s0btF4PtYvsDJDAaownEk9mXp1ka83p4" />
+    <meta name="theme-color" content="#0A8A1F" />
+    
+    <!-- PWA and Legacy Mobile Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Krishi AI" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- App Icons: Krishi AI Leaf Brand Identity -->
+    <!-- Primary SVG Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjI1IiBmaWxsPSIjMEE4QTFGIi8+PHBhdGggZD0iTTUwIDk1QzUwIDk1IDg1IDc1IDg1IDQwQzg1IDE1IDY1IDUgNTAgNUMzNSA1IDE1IDE1IDE1IDQwQzE1IDc1IDUwIDk1IDUwIDk1WiIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNNTAgODVDNTAgODUgNzUgNjggNzUgNDBDNzUgMjIgNjIgMTUgNTAgMTVDMzggMTUgMjUgMjIgMjUgNDBDMjUgNjggNTAgODUgNTAgODVaIiBmaWxsPSIjMEE4QTFGIi8+PC9zdmc+" />
+    <!-- Apple Touch Icon (Highest Compatibility) -->
+    <link rel="apple-touch-icon" href="data:image/png;base64,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" />
+    
+    <link rel="manifest" href="manifest.json" />
+    <title>Krishi AI: স্মার্ট কৃষি ইকোসিস্টেম</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Hind Siliguri', sans-serif;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+      @keyframes scan {
+        0% { top: 0%; opacity: 0; }
+        50% { opacity: 1; }
+        100% { top: 100%; opacity: 0; }
+      }
+      @keyframes grow-plant {
+        0% { transform: scale(0) translateY(40px) rotate(-5deg); opacity: 0; }
+        15% { opacity: 0.2; }
+        85% { opacity: 0.2; }
+        100% { transform: scale(1.1) translateY(-60px) rotate(5deg); opacity: 0; }
+      }
+      .animate-grow-plant {
+        animation: grow-plant 10s ease-in-out infinite;
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.8s ease-out forwards;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-gray-50 text-gray-900">
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          try {
+            const swUrl = new URL('sw.js', window.location.href);
+            if (swUrl.origin === window.location.origin) {
+              navigator.serviceWorker.register(swUrl.href)
+                .then(reg => {
+                  console.log('Service Worker registered successfully:', reg.scope);
+                })
+                .catch(err => {
+                  console.debug('Service Worker registration deferred:', err.message);
+                });
+            } else {
+              console.debug('Service Worker registration skipped: Cross-origin restriction detected.');
+            }
+          } catch (e) {}
+        });
+      }
+    </script>
+  </body>
+</html>
