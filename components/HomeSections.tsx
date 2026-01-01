@@ -1,27 +1,55 @@
 
-import React from 'react';
-import { View } from '../types';
+import React, { useState, useEffect } from 'react';
+import { View, Language } from '../types';
+import { getAgriNews } from '../services/geminiService';
 
-export const NewsTicker: React.FC = () => {
-  const news = [
-    "আন্তর্জাতিক চালের বাজারে বাংলাদেশের রপ্তানি বেড়েছে ১০%",
-    "আগামী ৪৮ ঘণ্টায় ভারি বৃষ্টির সম্ভাবনা - সতর্ক থাকুন",
-    "বারি (BARI) উদ্ভাবিত নতুন ধানের জাত অবমুক্ত",
-    "নতুন সরকারি কৃষি ভর্তুকি আবেদন শুরু হয়েছে",
-    "আলুর লেট ব্লাইট দমনে দেশজুড়ে সর্তকতা জারি"
-  ];
+// Add Language type to NewsTicker props to fix assignability error in App.tsx
+export const NewsTicker: React.FC<{ lang?: Language }> = ({ lang = 'bn' }) => {
+  const [news, setNews] = useState<string[]>([
+    "সর্বশেষ কৃষি তথ্য লোড হচ্ছে...",
+    "বিএআরআই উদ্ভাবিত প্রযুক্তি ব্যবহার করুন",
+    "সুষম সার প্রয়োগ নিশ্চিত করুন"
+  ]);
+
+  useEffect(() => {
+    const fetchLatestNews = async () => {
+      try {
+        // Pass lang to getAgriNews to ensure correct localized content
+        const data = await getAgriNews(lang);
+        if (data && data.length > 0) {
+          setNews(data);
+        }
+      } catch (e) {
+        console.error("News fetch error", e);
+      }
+    };
+    fetchLatestNews();
+  }, [lang]);
+
+  const today = new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="bg-slate-900 text-white py-3 overflow-hidden whitespace-nowrap border-b border-white/5 z-[60] sticky top-16 h-12 flex items-center shadow-lg">
-      <div className="bg-emerald-600 px-4 h-full flex items-center font-black text-[10px] uppercase tracking-widest z-10 shadow-xl mr-4 shrink-0">Latest</div>
-      <div className="flex animate-[scroll_40s_linear_infinite] space-x-16 px-4">
-        {news.concat(news).map((item, i) => (
-          <div key={i} className="flex items-center space-x-3">
-            <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.6)]"></span>
-            <span className="text-[11px] font-bold uppercase tracking-widest opacity-90">{item}</span>
-          </div>
-        ))}
+    <div className="bg-slate-900 text-white overflow-hidden whitespace-nowrap border-y border-white/10 z-[60] sticky top-16 h-14 flex items-center shadow-2xl">
+      {/* Date & Breaking Label */}
+      <div className="bg-rose-600 px-6 h-full flex flex-col justify-center items-center z-20 shadow-[10px_0_20px_rgba(0,0,0,0.3)] relative">
+        <span className="text-[10px] font-black uppercase tracking-widest text-rose-100">ব্রেকিং নিউজ</span>
+        <span className="text-[11px] font-black mt-0.5">{today}</span>
+        {/* Triangle end piece for style */}
+        <div className="absolute top-0 -right-4 h-full w-4 bg-rose-600" style={{ clipPath: 'polygon(0 0, 0% 100%, 100% 50%)' }}></div>
       </div>
+      
+      {/* Moving Text */}
+      <div className="flex-1 overflow-hidden h-full flex items-center relative">
+        <div className="flex animate-[scroll_45s_linear_infinite] space-x-24 px-8 items-center">
+          {news.concat(news).map((item, i) => (
+            <div key={i} className="flex items-center space-x-4">
+              <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_12px_rgba(52,211,153,0.8)]"></span>
+              <span className="text-sm md:text-base font-black tracking-tight drop-shadow-sm">{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes scroll {
           0% { transform: translateX(0); }
@@ -59,7 +87,7 @@ const StatItem = ({ label, val, icon, trend, trendUp }: any) => (
 
 export const FeaturedCourses: React.FC<{ onNavigate: (v: View) => void }> = ({ onNavigate }) => {
   const courses = [
-    { title: "আধুনিক ধান চাষ ও প্রযুক্তি", level: "বেসিক", icon: "🌾", color: "bg-emerald-500" },
+    { title: "লাভজনক ধান চাষ ও প্রযুক্তি", level: "বেসিক", icon: "🌾", color: "bg-emerald-500" },
     { title: "জৈবিক বালাইনাশক ও সার", level: "ইন্টারমিডিয়েট", icon: "🐞", color: "bg-blue-500" },
     { title: "মৃত্তিকা বিজ্ঞান ও অডিট", level: "অ্যাডভান্সড", icon: "🏺", color: "bg-amber-500" },
     { title: "স্মার্ট সেচ ও কৃষি মনিটরিং", level: "বেসিক", icon: "💧", color: "bg-indigo-500" },
@@ -67,35 +95,57 @@ export const FeaturedCourses: React.FC<{ onNavigate: (v: View) => void }> = ({ o
 
   return (
     <section className="py-16 px-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-        <div>
-          <div className="inline-flex items-center space-x-2 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 mb-3">
-             <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-             <span className="text-[9px] font-black text-amber-800 uppercase tracking-widest">Digital Academy</span>
-          </div>
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none">প্রশিক্ষণ একাডেমি</h2>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] mt-3">Professional Agri-Skill Development (Coming Soon)</p>
-        </div>
-        <button onClick={() => onNavigate(View.LEARNING_CENTER)} className="text-slate-400 font-black text-xs uppercase tracking-widest border-b-4 border-slate-200 pb-1 hover:text-emerald-600 hover:border-emerald-600 transition-all">শিখন কেন্দ্র দেখুন</button>
-      </div>
-      <div className="flex space-x-6 overflow-x-auto pb-8 scrollbar-hide -mx-2 px-2">
-        {courses.map((course, i) => (
-          <div key={i} className="min-w-[280px] bg-white rounded-[3rem] p-8 shadow-xl border border-slate-50 group hover:-translate-y-3 transition-all relative overflow-hidden">
-            {/* Coming Soon Overlay Elements */}
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10"></div>
-            <div className="absolute top-6 right-6 z-20 bg-slate-900 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-xl">Cooking Soon</div>
-            
-            <div className="relative z-0 opacity-50 grayscale">
-              <div className={`w-16 h-16 ${course.color} rounded-3xl flex items-center justify-center text-3xl text-white mb-8 shadow-2xl transition-all duration-500`}>{course.icon}</div>
-              <p className="text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest flex items-center">
-                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>
-                 {course.level}
-              </p>
-              <h3 className="text-2xl font-black text-slate-800 leading-tight mb-8">{course.title}</h3>
-              <button disabled className="w-full py-4 bg-slate-200 text-slate-400 rounded-2xl font-black text-xs uppercase tracking-widest cursor-not-allowed">শীঘ্রই আসছে</button>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-16">
+        <div className="lg:col-span-8">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+            <div>
+              <div className="inline-flex items-center space-x-2 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 mb-3">
+                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                 <span className="text-[9px] font-black text-amber-800 uppercase tracking-widest">Digital Academy</span>
+              </div>
+              <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none">প্রশিক্ষণ একাডেমি</h2>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] mt-3">Professional Agri-Skill Development (Coming Soon)</p>
             </div>
+            <button onClick={() => onNavigate(View.LEARNING_CENTER)} className="text-slate-400 font-black text-xs uppercase tracking-widest border-b-4 border-slate-200 pb-1 hover:text-emerald-600 hover:border-emerald-600 transition-all">শিখন কেন্দ্র দেখুন</button>
           </div>
-        ))}
+          <div className="flex space-x-6 overflow-x-auto pb-8 scrollbar-hide -mx-2 px-2">
+            {courses.map((course, i) => (
+              <div key={i} className="min-w-[280px] bg-white rounded-[3rem] p-8 shadow-xl border border-slate-50 group hover:-translate-y-3 transition-all relative overflow-hidden">
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10"></div>
+                <div className="absolute top-6 right-6 z-20 bg-slate-900 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-xl">Cooking Soon</div>
+                
+                <div className="relative z-0 opacity-50 grayscale">
+                  <div className={`w-16 h-16 ${course.color} rounded-3xl flex items-center justify-center text-3xl text-white mb-8 shadow-2xl transition-all duration-500`}>{course.icon}</div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest flex items-center">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>
+                    {course.level}
+                  </p>
+                  <h3 className="text-2xl font-black text-slate-800 leading-tight mb-8">{course.title}</h3>
+                  <button disabled className="w-full py-4 bg-slate-200 text-slate-400 rounded-2xl font-black text-xs uppercase tracking-widest cursor-not-allowed">শীঘ্রই আসছে</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Nearby Map Shortcut Section - Updated to Navigate to Profile */}
+        <div className="lg:col-span-4">
+           <div className="bg-slate-900 rounded-[3.5rem] p-10 h-full text-white shadow-2xl relative overflow-hidden group border-b-[16px] border-emerald-600">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
+              <div className="relative z-10">
+                 <div className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center text-3xl mb-8 shadow-xl transform transition-transform group-hover:rotate-12">📍</div>
+                 <h3 className="text-3xl font-black tracking-tight leading-none mb-4">নিকটস্থ কৃষি হাব</h3>
+                 <p className="text-slate-400 text-sm font-medium leading-relaxed mb-10">আপনার ক্ষেতের চারপাশ থেকে সেরা বীজ ভাণ্ডার, বালাইনাশক ডিলার এবং ডিএই অফিসগুলো খুঁজে বের করুন।</p>
+                 <button 
+                   onClick={() => onNavigate(View.PROFILE)}
+                   className="w-full bg-white text-slate-900 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl hover:bg-emerald-50 transition-all active:scale-95 flex items-center justify-center space-x-3"
+                 >
+                    <span>প্রোফাইল ম্যাপ দেখুন</span>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 20l-5.447-2.724A2 2 0 013 15.485V6.515a2 2 0 011.553-1.943L9 2l5.447 2.724A2 2 0 0115 6.515v8.97a2 2 0 01-1.553 1.943L9 20z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 2v18M15 11h.01" /></svg>
+                 </button>
+              </div>
+           </div>
+        </div>
       </div>
     </section>
   );
@@ -110,24 +160,15 @@ export const MissionSection: React.FC = () => (
       </div>
       <h2 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter leading-[0.9]">টেকসই প্রযুক্তিতে<br/><span className="bg-gradient-to-r from-emerald-600 to-green-800 bg-clip-text text-transparent">স্মার্ট কৃষি বিপ্লব ২০২৫</span></h2>
       <p className="text-xl text-slate-500 font-medium leading-relaxed max-w-3xl mx-auto">
-        Krishi AI-এর লক্ষ্য হলো ২০৫০ সালের মধ্যে আধুনিক এআই ও ডেটা সায়েন্স ব্যবহার করে উৎপাদনশীলতা বৃদ্ধি, 
+        Krishi AI-এর লক্ষ্য হলো ২০৫০ সালের মধ্যে লাভজনক এআই ও ডেটা সায়েন্স ব্যবহার করে উৎপাদনশীলতা বৃদ্ধি, 
         উপকরণের সর্বোচ্চ সঠিক ব্যবহার এবং চাষের খরচ কমিয়ে বাংলাদেশের প্রতিটি কৃষকের মুখে হাসি ফোটানো।
       </p>
       
-      <div className="flex flex-wrap justify-center gap-4 py-4">
-        <span className="bg-white px-4 py-2 rounded-xl text-[10px] font-black text-[#0A8A1F] border border-emerald-100 shadow-sm uppercase tracking-widest">
-           Aligns with BD-GAP (Good Agriculture Practice)
-        </span>
-        <span className="bg-white px-4 py-2 rounded-xl text-[10px] font-black text-blue-600 border border-blue-100 shadow-sm uppercase tracking-widest">
-           Supporting SDGs (Goal 2: Zero Hunger)
-        </span>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-6">
          <MissionCard 
            icon="📈" 
            title="উচ্চ উৎপাদনশীলতা" 
-           desc="আধুনিক জাত ও বিজ্ঞানভিত্তিক চাষ পদ্ধতি প্রয়োগের মাধ্যমে হেক্টর প্রতি ফলন বৃদ্ধি।" 
+           desc="লাভজনক জাত ও বিজ্ঞানভিত্তিক চাষ পদ্ধতি প্রয়োগের মাধ্যমে হেক্টর প্রতি ফলন বৃদ্ধি।" 
          />
          <MissionCard 
            icon="⚖️" 
@@ -161,7 +202,7 @@ export const ContactFooter: React.FC = () => (
       <div className="space-y-10">
          <div className="space-y-4">
             <h3 className="text-5xl md:text-6xl font-black tracking-tighter leading-none">আপনার খামার,<br/><span className="text-emerald-500">আমাদের প্রযুক্তি।</span></h3>
-            <p className="text-xl text-slate-400 font-medium max-w-md">যেকোনো জিজ্ঞাসা বা টেকনিক্যাল সহায়তার জন্য আমাদের এগ্রো-এক্সপার্টরা ২৪/৭ প্রস্তুত।</p>
+            <p className="text-xl text-slate-400 font-medium max-w-md">যেকোনো জিজ্ঞাসা বা টেকనిక্যাল সহায়তার জন্য আমাদের এগ্রো-এক্সপার্টরা ২৪/৭ প্রস্তুত।</p>
          </div>
          <div className="flex flex-col space-y-6">
             <a href="https://wa.me/8801712653740" target="_blank" className="flex items-center space-x-6 bg-white/5 p-6 rounded-[2.5rem] border border-white/10 hover:bg-emerald-600 transition-all group shadow-xl">
@@ -196,7 +237,7 @@ export const ContactFooter: React.FC = () => (
             <div className="aspect-video bg-slate-800/50 rounded-[2.5rem] flex items-center justify-center border-2 border-dashed border-white/10 text-slate-400 text-center p-8 group-hover:border-blue-500/50 transition-colors">
                <div className="space-y-6">
                  <div className="text-6xl opacity-40">🌍</div>
-                 <p className="font-bold text-lg leading-relaxed">বিশ্বের বিভিন্ন প্রান্তের আধুনিক কৃষি খবর ও প্রযুক্তি শেয়ার করুন আমাদের গ্লোবাল ফোরামে।</p>
+                 <p className="font-bold text-lg leading-relaxed">বিশ্বের বিভিন্ন প্রান্তের লাভজনক কৃষি খবর ও প্রযুক্তি শেয়ার করুন আমাদের গ্লোবাল ফোরামে।</p>
                  <button className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl active:scale-95 transition-all">ফোরামে যোগ দিন</button>
                </div>
             </div>

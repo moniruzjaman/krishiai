@@ -1,11 +1,12 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 
 interface YieldCalculatorProps {
   onAction?: () => void;
+  // Fix: Added missing onBack prop
+  onBack?: () => void;
 }
 
-const YieldCalculator: React.FC<YieldCalculatorProps> = ({ onAction }) => {
+const YieldCalculator: React.FC<YieldCalculatorProps> = ({ onAction, onBack }) => {
   const [activeTab, setActiveTab] = useState<'sample' | 'factors'>('sample');
   const [isListening, setIsListening] = useState(false);
   const [activeListeningId, setActiveListeningId] = useState<string | null>(null);
@@ -100,7 +101,8 @@ const YieldCalculator: React.FC<YieldCalculatorProps> = ({ onAction }) => {
   return (
     <div className="max-w-4xl mx-auto p-4 pb-24 font-sans text-slate-900 animate-fade-in">
       <div className="flex items-center space-x-4 mb-8">
-        <button onClick={() => window.history.back()} className="p-3 bg-white rounded-2xl shadow-sm hover:bg-slate-100 transition-all active:scale-90">
+        {/* Fix: Changed to use onBack prop */}
+        <button onClick={() => onBack?.()} className="p-3 bg-white rounded-2xl shadow-sm hover:bg-slate-100 transition-all active:scale-90">
           <svg className="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </button>
         <div>

@@ -1,7 +1,18 @@
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
-import { AnalysisResult, GroundingChunk, FlashCard, AgriTask, UserCrop, User, WeatherData, CropDiseaseReport, AgriQuizQuestion } from "../types";
+import { AnalysisResult, GroundingChunk, FlashCard, AgriTask, UserCrop, User, WeatherData, CropDiseaseReport, AgriQuizQuestion, Language, UserRole } from "../types";
 import { AEZInfo } from "./locationService";
+
+const extractJSON = <T>(text: string, defaultValue: T): T => {
+  if (!text) return defaultValue;
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    return jsonMatch ? JSON.parse(jsonMatch[0]) as T : defaultValue;
+  } catch (e) {
+    console.error("JSON Parse Error:", e, "Raw text:", text);
+    return defaultValue;
+  }
+};
 
 const withRetry = async <T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> => {
   let lastError: any;
@@ -10,9 +21,24 @@ const withRetry = async <T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> =>
       return await fn();
     } catch (error: any) {
       lastError = error;
-      const status = error?.status || error?.error?.code || (error?.message?.includes('503') ? 503 : 0);
-      if (status === 503 || status === 500 || status === 429) {
-        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+      const errorMessage = error?.message || "";
+      const errorBody = typeof error === 'string' ? error : JSON.stringify(error);
+      
+      const isReferrerBlocked = errorMessage.includes("API_KEY_HTTP_REFERRER_BLOCKED") || 
+                                errorBody.includes("blocked") || 
+                                errorBody.includes("PERMISSION_DENIED");
+      
+      const isEntityNotFound = errorMessage.includes("Requested entity was not found");
+
+      if (isReferrerBlocked || isEntityNotFound) {
+        window.dispatchEvent(new CustomEvent('agritech_api_key_invalid', { 
+          detail: { message: isReferrerBlocked ? "REFERRER_BLOCKED" : "NOT_FOUND" } 
+        }));
+        throw error;
+      }
+
+      if (error?.status === 429 || error?.status === 500) {
+        const delay = Math.pow(2, i) * 2000;
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
@@ -24,486 +50,520 @@ const withRetry = async <T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> =>
 
 export const decodeBase64 = (base64: string): Uint8Array => {
   const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
   return bytes;
 };
 
-export const decodeAudioData = async (
-  data: Uint8Array,
-  ctx: AudioContext,
-  sampleRate: number,
-  numChannels: number,
-): Promise<AudioBuffer> => {
+export const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> => {
   const dataInt16 = new Int16Array(data.buffer);
   const frameCount = dataInt16.length / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
   for (let channel = 0; channel < numChannels; channel++) {
     const channelData = buffer.getChannelData(channel);
-    for (let i = 0; i < frameCount; i++) {
-      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-    }
+    for (let i = 0; i < frameCount; i++) channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
   }
   return buffer;
 };
 
-export const getLiveWeather = async (lat: number, lng: number, forceRefresh: boolean = false): Promise<WeatherData> => {
+export const analyzeCropImage = async (base64Data: string, mimeType: string, options?: { cropFamily?: string, userRank?: string, query?: string, lang?: Language, weather?: WeatherData }): Promise<AnalysisResult> => {
+  const lang = options?.lang || 'bn';
   return withRetry(async () => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Using Google Search, fetch the absolute latest localized real-time weather metrics and a 7-day forecast for the location at coordinates (${lat}, ${lng}) in Bangladesh.
-    GROUNDING: You MUST prioritize "Google Weather" data for current temperature, humidity, wind speed, and rain probability. 
-    Use this data to calculate agricultural metrics like GDD and Evapotranspiration (ET0).
-    Return the response strictly as JSON in professional Bangla.
-    Include:
-    1. Current stats (temp, upazila, district, humidity, windSpeed, rainProbability, ET0, soilTemp, solarRadiation, GDD).
-    2. A full 7-day forecast.
-    All descriptive strings must be in Bangla.`;
+    const systemInstruction = `Role: Senior BARC/DAE Agronomist. 
+    Task: Identify issue (Pest/Disease/Deficiency).
+    SIGNBOARD DETECTION: If a government/research signboard is visible in the media, strictly extract:
+    1. Variety Name (e.g. BRRI dhan89)
+    2. Sowing/Planting Date
+    3. Plot ID
+    Incorporate this into the diagnosis.
+    Weather Context: ${JSON.stringify(options?.weather)}.
+    Source: DAE/BARC/BRRI standards.
+    Language: ${lang === 'bn' ? 'Bangla' : 'English'}.
+    JSON Output: { "diagnosis": string, "category": "Pest"|"Disease"|"Deficiency"|"Other", "confidence": number, "advisory": string, "fullText": string, "officialSource": string }`;
     
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-      config: { 
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            city: { type: Type.STRING },
-            upazila: { type: Type.STRING },
-            district: { type: Type.STRING },
-            temp: { type: Type.NUMBER },
-            condition: { type: Type.STRING },
-            description: { type: Type.STRING },
-            humidity: { type: Type.NUMBER },
-            windSpeed: { type: Type.NUMBER },
-            rainProbability: { type: Type.NUMBER },
-            evapotranspiration: { type: Type.NUMBER },
-            soilTemperature: { type: Type.NUMBER },
-            solarRadiation: { type: Type.NUMBER },
-            gdd: { type: Type.NUMBER },
-            forecast: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  date: { type: Type.STRING },
-                  condition: { type: Type.STRING },
-                  maxTemp: { type: Type.NUMBER },
-                  minTemp: { type: Type.NUMBER },
-                  rainProbability: { type: Type.NUMBER }
-                },
-                required: ["date", "condition", "maxTemp", "minTemp", "rainProbability"]
-              }
-            }
-          },
-          required: ["city", "upazila", "district", "temp", "condition", "description", "humidity", "windSpeed", "rainProbability", "evapotranspiration", "soilTemperature", "solarRadiation", "gdd", "forecast"]
-        }
-      }
+      model: 'gemini-3-pro-preview',
+      contents: [{ parts: [{ inlineData: { data: base64Data, mimeType } }, { text: `Analyze symptoms in ${options?.cropFamily}. User Query: ${options?.query}. Check for signboards.` }] }],
+      config: { systemInstruction, responseMimeType: "application/json", tools: [{ googleSearch: {} }] }
     });
-    return JSON.parse(response.text || "{}");
+    
+    const parsed = extractJSON<any>(response.text || "{}", {});
+    return { ...parsed, groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
   });
 };
 
-export const getTrendingMarketPrices = async (): Promise<any[]> => {
+export const requestPrecisionParameters = async (base64Data: string, mimeType: string, crop: string, lang: Language = 'bn', previousAnswers?: Record<string, string>): Promise<any[]> => {
   return withRetry(async () => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Using Google Search, find the absolute latest retail and wholesale prices for key agricultural commodities (Rice, Potato, Onion, Green Chili, Egg, Beef) in Dhaka markets today. 
-    GROUNDING: Prioritize data from dam.gov.bd and reliable news sources. 
-    Return strictly as a JSON array of objects.
-    Schema: [{ name: string, category: string, unit: string, price: number, trend: 'up'|'down'|'stable', change: string }].
-    Output in professional Bangla.`;
+    const context = previousAnswers ? `Previous context: ${JSON.stringify(previousAnswers)}.` : '';
+    const prompt = `Review this ${crop} media. ${context} 
+    To reach 100% precision for DAE protocols, generate 3-5 follow-up questions. 
+    Support types: "select" (include options), "date", "text", "number".
+    JSON Format: [{ "id": string, "label": "Question in ${lang}", "type": string, "options": [] if select, "hint": string }]`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: prompt,
-      config: { 
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              name: { type: Type.STRING },
-              category: { type: Type.STRING },
-              unit: { type: Type.STRING },
-              price: { type: Type.NUMBER },
-              trend: { type: Type.STRING, enum: ['up', 'down', 'stable'] },
-              change: { type: Type.STRING }
-            },
-            required: ["name", "category", "unit", "price", "trend", "change"]
-          }
-        }
-      }
+      contents: [{ parts: [{ inlineData: { data: base64Data, mimeType } }, { text: prompt }] }],
+      config: { responseMimeType: "application/json" }
     });
-    return JSON.parse(response.text || "[]");
+    return extractJSON<any[]>(response.text || "[]", []);
   });
 };
 
-export const generateGroundedWeatherReport = async (location: string): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
+export const performDeepAudit = async (base64Data: string, mimeType: string, crop: string, dynamicData: Record<string, string>, lang: Language = 'bn', weather?: WeatherData): Promise<AnalysisResult> => {
   return withRetry(async () => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `As a Senior Agro-Meteorologist, integrate current "Google Weather" data for ${location} with official agricultural advisories and meteorological alerts from the BAMIS (Bangladesh Agricultural Meteorological Information System) portal.
-    Provide an "Official Agriculture Impact Report" in professional Bangla.
-    Include: 
-    1. Pest/Disease risk associations based on moisture and heat (BAMIS guidelines).
-    2. Specific crop-wise advisories (e.g., Rice, Potato, Mustard).
-    3. Grounded source links specifically mentioning BAMIS and BMD.`;
-    
+    const systemInstruction = `Role: Chief Scientist BARC. 
+    Data: ${JSON.stringify(dynamicData)}. 
+    Weather: ${JSON.stringify(weather)}. 
+    Language: ${lang === 'bn' ? 'Bangla' : 'English'}.
+    JSON Output: { "diagnosis": string, "category": string, "confidence": number, "advisory": string, "fullText": string, "officialSource": string }`;
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: prompt,
-      config: { tools: [{ googleSearch: {} }] }
+      contents: [{ parts: [{ inlineData: { data: base64Data, mimeType } }, { text: `Final Audit for ${crop} with all dynamic context.` }] }],
+      config: { systemInstruction, responseMimeType: "application/json", tools: [{ googleSearch: {} }] }
     });
-    return {
-      text: response.text || "",
-      groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || []
-    };
+
+    const parsed = extractJSON<any>(response.text || "{}", {});
+    return { ...parsed, groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
   });
 };
 
-export const analyzeCropImage = async (base64Image: string, mimeType: string, options?: { focus?: string, cropFamily?: string, userRank?: string, userCrops?: UserCrop[], query?: string }): Promise<AnalysisResult & { groundingChunks?: GroundingChunk[] }> => {
+export const searchNearbySellers = async (lat: number, lng: number, type: string = 'Agri seed and pesticide store', lang: Language = 'bn') => {
   return withRetry(async () => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const systemInstruction = `You are a Senior Agriculture Scientist specializing in Bangladesh crops. 
-    Your mission is to provide precision diagnostics and professional advisory grounded in official standards.
-    
-    STRICT PROTOCOLS:
-    1. DIAGNOSIS: Follow CABI Plantwise Knowledge Bank field diagnosis guide standards.
-    2. ADVISORY: Ground recommendations strictly in official BARC (Bangladesh Agricultural Research Council), BRRI (Rice), BARI (Other crops), DAE, and SRDI (Soil) guidelines.
-    3. STANDARDS HIGHLIGHT: Explicitly mention the government standard used (e.g., "BARC ২০২৪ সার নির্দেশিকা অনুযায়ী...").
-    4. LANGUAGE: All output must be in professional, clear Bangla.
-    5. FOCUS: Accurately identify Pests, Diseases, and Nutrient Deficiencies from images.`;
-
-    const prompt = `বিশ্লেষণ করুন:
-    ফসল: ${options?.cropFamily || 'অনির্ধারিত'}
-    বিশ্লেষণের ক্ষেত্র: ${options?.focus || 'সামগ্রিক স্বাস্থ্য'}
-    ব্যবহারকারীর প্রশ্ন/মন্তব্য: ${options?.query || 'কোনটি নির্দিষ্ট করা নেই'}
-    ব্যবহারকারীর স্তর: ${options?.userRank || 'নবিশ কৃষক'}
-
-    CABI ও সরকারি (BARC/BARI/BRRI/DAE/SRDI) মানদণ্ড অনুযায়ী লক্ষণ শনাক্ত করুন এবং প্রতিকার দিন। ব্যবহারকারীর প্রশ্নের উত্তর গুরুত্বের সাথে দিন।`;
-
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] },
-      config: { 
-        systemInstruction,
-        tools: [{ googleSearch: {} }] 
-      }
+      model: 'gemini-2.5-flash',
+      contents: `Find nearest "${type}" in Bangladesh around GPS (${lat}, ${lng}). Response in ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleMaps: {} }], toolConfig: { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } } },
     });
-    return { 
-      diagnosis: "সফলভাবে শনাক্তকৃত", 
-      advisory: "বিজ্ঞানী নির্ধারিত সমাধান", 
-      fullText: response.text || "", 
-      groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] 
-    };
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
   });
 };
 
-export const performSoilHealthAudit = async (data: any, aez?: AEZInfo) => {
+export const sendChatMessage = async (history: any[], newMessage: string, userRank: string = 'নবিশ কৃষক', userRole: UserRole = 'farmer_entrepreneur', weather?: WeatherData, userCrops?: UserCrop[], lang: Language = 'bn') => {
   return withRetry(async () => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `আপনি একজন জ্যেষ্ঠ মৃত্তিকা বিজ্ঞানী। BARC এবং SRDI এর মানদণ্ড অনুযায়ী মৃত্তিকা অডিট করুন। ডাটা: pH:${data.ph}, OC:${data.oc}, N:${data.n}, P:${data.p}, K:${data.k}। ভাষা: বাংলা।`;
+    const systemInstruction = `Role: Krishi AI Consultant. Rank: ${userRank}. Role: ${userRole}. Weather: ${JSON.stringify(weather)}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}. Source: gov.bd only.`;
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: prompt,
-      config: { tools: [{ googleSearch: {} }] }
-    });
-    return response.text || "";
-  });
-};
-
-export const sendChatMessage = async (history: any[], newMessage: string, userRank: string = 'নবিশ কৃষক', weatherContext?: WeatherData, userCrops: UserCrop[] = []) => {
-  return withRetry(async () => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const systemInstruction = `আপনি Krishi AI এর সিনিয়র এগ্রোনোমিস্ট, মৃত্তিকা বিজ্ঞানী এবং বাজার বিশ্লেষক।
-    
-    আপনার প্রধান কাজগুলো হলো:
-    ১. কৃষি পরামর্শের জন্য অবশ্যই BARC, BARI, BRRI এবং DAE এর অফিসিয়াল নির্দেশিকা এবং আধুনিক গবেষণা ফলাফল অনুসরণ করুন।
-    ২. মৃত্তিকা স্বাস্থ্য এবং সারের মাত্রার জন্য SRDI এর মানদণ্ড ও AEZ ম্যাপ ব্যবহার করুন।
-    ৩. বাংলাদেশের বর্তমান বাজার দরের (Retail/Wholesale) জন্য 'dam.gov.bd' এবং 'BAMIS' পোর্টাল থেকে সর্বশেষ তথ্য অনুসন্ধান করুন।
-    ৪. আবহাওয়া সম্পর্কিত তথ্যের জন্য Google Weather এবং BAMIS এর ওপর নির্ভর করুন।
-    ৫. সকল উত্তর অত্যন্ত পেশাদার বাংলায় দিন এবং তথ্যসূত্র (Verified Sources) উল্লেখ করুন।
-    ৬. আপনি বাংলাদেশের কৃষি মন্ত্রণালয় এবং এর অধীনস্থ সকল সরকারি সংস্থার এআই প্রতিনিধি হিসেবে কাজ করছেন।
-    
-    আপনার বর্তমান ব্যবহারকারীর স্তর: ${userRank}।
-    অতিরিক্ত প্রেক্ষাপট:
-    - চাষকৃত ফসল: ${userCrops.map(c => c.name).join(', ') || 'এখনো যোগ করা হয়নি'}
-    - এলাকা: ${weatherContext ? weatherContext.upazila + ', ' + weatherContext.district : 'শনাক্ত হয়নি'}
-    `;
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',
       contents: [...history, { role: 'user', parts: [{ text: newMessage }] }],
-      config: { 
-        tools: [{ googleSearch: {} }], 
-        systemInstruction 
-      }
+      config: { tools: [{ googleSearch: {} }], systemInstruction }
     });
-    
-    return {
-      text: response.text || "",
-      groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || []
-    };
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
   });
 };
 
-export const getHomeQuickTip = async (crops: UserCrop[], weather?: WeatherData): Promise<string> => {
+export const getLiveWeather = async (lat: number, lng: number, force?: boolean, lang: Language = 'bn'): Promise<WeatherData> => {
   return withRetry(async () => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const cropsStr = crops.map(c => c.name).join(', ');
-    const prompt = `আমার ফসল: ${cropsStr}। বর্তমানে জরুরি কৃষি টিপস বাংলায় দিন। BARC/BARI/BRRI/DAE এর নির্দেশিকা অনুসরণ করুন। বর্তমান আবহাওয়া (Google Weather ভিত্তিক): ${weather ? weather.condition : 'অজানা'}।`;
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: prompt,
+      contents: `Search BMD/BAMIS for current weather at ${lat}, ${lng} Bangladesh. 
+      Required JSON Output keys: upazila, district, temp, condition, description, humidity, windSpeed, rainProbability, diseaseRisk, evapotranspiration, soilTemperature, solarRadiation, gdd. 
+      Also include a 7-day forecast as an array of objects: forecast: [{date: string, maxTemp: number, minTemp: number, condition: string}]. 
+      IMPORTANT: "diseaseRisk" should contain specific associations like "High blast risk for Rice" or "Blight risk for Potato" based on temp/humidity. 
+      Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return extractJSON<WeatherData>(response.text || "{}", { 
+      upazila: "অজানা", 
+      district: "অজানা", 
+      temp: 0, 
+      condition: "অজানা", 
+      description: "", 
+      humidity: 0, 
+      windSpeed: 0, 
+      rainProbability: 0, 
+      diseaseRisk: "",
+      evapotranspiration: 0,
+      soilTemperature: 0,
+      solarRadiation: 0,
+      gdd: 0,
+      forecast: []
+    });
+  });
+};
+
+export const generateSpeech = async (text: string): Promise<string> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text }] }],
+      config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } }
+    });
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
+  });
+};
+
+export const searchAgriculturalInfo = async (query: string, lang: Language = 'bn'): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Search DAE/BARC/gov.bd for: ${query}. Respond in ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
+  });
+};
+
+export const getAgriNews = async (lang: Language = 'bn'): Promise<string[]> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Latest 5 agri news headlines for Bangladesh (gov.bd). JSON array of strings. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return extractJSON<string[]>(response.text || "[]", []);
+  });
+};
+
+export const getTrendingMarketPrices = async (lang: Language = 'bn'): Promise<any[]> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Latest market prices from dam.gov.bd. JSON array: {name, price, change, trend, category, unit}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
+    });
+    return extractJSON<any[]>(response.text || "[]", []);
+  });
+};
+
+export const getAICropSchedule = async (crop: string, date: string, season: string, lang: Language = 'bn'): Promise<any[]> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `2025 Crop calendar for ${crop} sown on ${date}. JSON array: {title, dueDate, category, notes}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return extractJSON<any[]>(response.text || "[]", []);
+  });
+};
+
+export const performSoilHealthAudit = async (data: any, aez?: AEZInfo, lang: Language = 'bn', weather?: WeatherData) => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Soil health audit for data ${JSON.stringify(data)} in AEZ ${aez?.name || 'Local'}. Weather: ${JSON.stringify(weather)}. Using BARC 2024 standards. Brief advisory in ${lang === 'bn' ? 'Bangla' : 'English'}.`,
       config: { tools: [{ googleSearch: {} }] }
     });
     return response.text || "";
+  });
+};
+
+export const getAIPlantNutrientAdvice = async (crop: string, aez: string, soil: string, area: number, unit: string, lang: Language = 'bn') => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `BARC fertilizer dose for ${crop} in ${aez}. Area ${area} ${unit}. Soil: ${soil}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return response.text || "";
+  });
+};
+
+export const getAgriFlashCards = async (topic: string, lang: Language = 'bn'): Promise<FlashCard[]> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `5 Flashcards for ${topic}. JSON: {id, front, back, hint}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return extractJSON<FlashCard[]>(response.text || "[]", []);
+  });
+};
+
+export const getPesticideRotationAdvice = async (query: string, lang: Language = 'bn'): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `IRAC/FRAC rotation for ${query}. Sites: gov.bd, irac-online.org. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
+  });
+};
+
+export const analyzePesticideMixing = async (items: any[], weather?: WeatherData, lang: Language = 'bn'): Promise<{ text: string; groundingChunks: GroundingChunk[]; compatibility: string }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Pesticide mixing compatibility for items: ${items.map(i => i.text).join(', ')}. Official DAE advice. Weather: ${JSON.stringify(weather)}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "", groundingChunks: [], compatibility: "Verified" };
+  });
+};
+
+export const getPesticideExpertAdvice = async (userPrompt: string, lang: Language = 'bn'): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `DAE Pesticide Dose for: ${userPrompt}. Site: dae.gov.bd. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
   });
 };
 
 export const generateAgriImage = async (prompt: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: [{ text: prompt }],
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({ 
+      model: 'gemini-2.5-flash-image', 
+      contents: [{ parts: [{ text: prompt }] }] 
+    });
+    const part = response.candidates?.[0]?.content.parts.find(p => p.inlineData);
+    return part?.inlineData ? `data:image/png;base64,${part.inlineData.data}` : "";
   });
-  return `data:image/png;base64,${response.candidates[0].content.parts.find(p => p.inlineData)?.inlineData?.data}`;
-};
-
-export const generateSpeech = async (text: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-preview-tts",
-    contents: [{ parts: [{ text }] }],
-    config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } }
-  });
-  return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
-};
-
-export const searchAgriculturalInfo = async (query: string): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: query,
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
-};
-
-export const getAICropSchedule = async (crop: string, date: string, season: string): Promise<any[]> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Schedule for ${crop} based on DAE and BARC guides. JSON Bangla.`,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, dueDate: { type: Type.STRING }, category: { type: Type.STRING }, notes: { type: Type.STRING } } }
-      }
-    }
-  });
-  return JSON.parse(response.text || "[]");
-};
-
-export const getAgriQuiz = async (topic: string): Promise<AgriQuizQuestion[]> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `MCQ for ${topic} based on BARI/BRRI curriculum. JSON Bangla.`,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: { type: Type.OBJECT, properties: { question: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, correctAnswer: { type: Type.INTEGER }, explanation: { type: Type.STRING } } }
-      }
-    }
-  });
-  return JSON.parse(response.text || "[]");
-};
-
-export const getAgriPodcastSummary = async (topic: string): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Podcast script for "${topic}" in Bangla using official agri news.`,
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
-};
-
-export const getAIYieldPrediction = async (crop: string, aez: string, soilStatus: string, farmingPractice: string, waterManagement: string, additionalNotes: string, userRank: string = 'নবিশ কৃষক', traits: Record<string, string> = {}): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const prompt = `Predict yield for ${crop} in ${aez} using BARC models. Soil: ${soilStatus}. Practice: ${farmingPractice}. Bangla.`;
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: prompt,
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
-};
-
-export const getLCCAnalysisSummary = async (lcc: number, tsr: number, dose: string, lang: 'en' | 'bn'): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `LCC Value ${lcc}, Dose ${dose} based on BRRI LCC Guide. Summary in ${lang}.`,
-  });
-  return response.text || "";
-};
-
-export const identifyPlantSpecimen = async (base64Image: string, mimeType: string): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: "এই উদ্ভিদটি শনাক্ত করুন। CABI এবং স্থানীয় উদ্ভিদ ডাটাবেস ব্যবহার করে বিস্তারিত বৈজ্ঞানিক নাম, পরিবার এবং এর গুরুত্ব অত্যন্ত পেশাদার বাংলায় লিখুন। উত্তরটি অবশ্যই সম্পূর্ণ বাংলায় হতে হবে।" }] },
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
-};
-
-export const getPersonalizedAgriAdvice = async (crops: UserCrop[], rank?: string, categories?: string[]): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const prompt = `Advice for crops: ${crops.map(c => c.name).join(', ')} following BARC guidelines. User rank: ${rank}. Bangla.`;
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: prompt,
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return response.text || "";
-};
-
-export const getAgriFlashCards = async (topic: string): Promise<FlashCard[]> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Flashcards for ${topic}. JSON Bangla.`,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: { type: Type.OBJECT, properties: { id: { type: Type.STRING }, front: { type: Type.STRING }, back: { type: Type.STRING }, hint: { type: Type.STRING }, category: { type: Type.STRING } } }
-      }
-    }
-  });
-  return JSON.parse(response.text || "[]");
-};
-
-export const getAgriMetaExplanation = async (query: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: query,
-  });
-  return response.text || "";
-};
-
-export const getPesticideRotationAdvice = async (query: string): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Rotation guide for: "${query}" using IRAC/FRAC and DAE standards. Bangla.`;
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
-};
-
-export const analyzePesticideMixing = async (items: any[], weather?: WeatherData): Promise<{ text: string; groundingChunks: GroundingChunk[]; compatibility: string }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const parts = items.map(i => i.data ? { inlineData: { data: i.data, mimeType: i.mimeType } } : { text: i.text });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: { parts: [...parts, { text: "Analyze mixing safety using official DAE compatibility charts. Bangla." }] },
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [], compatibility: response.text?.includes('নিরাপদ') ? 'Safe' : 'Warning' };
-};
-
-export const getPesticideExpertAdvice = async (prompt: string): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: prompt,
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
-};
-
-export const getBiocontrolExpertAdvice = async (query: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Biocontrol for: "${query}" based on BARI IPM Lab reports. Bangla.`,
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return response.text || "";
-};
-
-export const interpretSoilReportAI = async (inputs: any): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Soil report using SRDI critical limits: pH=${inputs.ph}, N=${inputs.n}. Bangla.`,
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return response.text || "";
-};
-
-export const getCropDiseaseInfo = async (crop: string): Promise<{ data: CropDiseaseReport }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Disease report for ${crop} based on BARC digital library. JSON format.`,
-    config: { 
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          cropName: { type: Type.STRING },
-          summary: { type: Type.STRING },
-          diseases: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, symptoms: { type: Type.STRING }, bioControl: { type: Type.STRING }, chemControl: { type: Type.STRING }, severity: { type: Type.STRING } } } },
-          pests: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, damageSymptoms: { type: Type.STRING }, bioControl: { type: Type.STRING }, chemControl: { type: Type.STRING }, severity: { type: Type.STRING } } } }
-        }
-      }
-    }
-  });
-  return { data: JSON.parse(response.text || "{}") };
-};
-
-export const getFieldMonitoringData = async (lat: number, lng: number, aezName: string): Promise<{ text: string }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Field monitoring at (${lat}, ${lng}) using BAMIS satellite data. Bangla.`,
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return { text: response.text || "" };
-};
-
-export const getAIPlantNutrientAdvice = async (crop: string, aez: string, soil: string, area: number, unit: string, userRank: string = 'নবিশ কৃষক') => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Nutrient advice for ${crop} in ${aez} based on BARC-2024 guide. Bangla.`,
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return response.text || "";
 };
 
 export const generateAgriVideo = async (prompt: string): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  let operation = await ai.models.generateVideos({
-    model: 'veo-3.1-fast-generate-preview',
-    prompt,
-    config: { numberOfVideos: 1, resolution: '720p', aspectRatio: '16:9' }
-  });
+  let operation = await ai.models.generateVideos({ model: 'veo-3.1-fast-generate-preview', prompt: `Tutorial on ${prompt}`, config: { numberOfVideos: 1, resolution: '720p', aspectRatio: '16:9' } });
   while (!operation.done) {
     await new Promise(resolve => setTimeout(resolve, 10000));
     operation = await ai.operations.getVideosOperation({ operation: operation });
   }
-  return `${operation.response?.generatedVideos?.[0]?.video?.uri}&key=${process.env.API_KEY}`;
+  const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+  return downloadLink ? `${downloadLink}&key=${process.env.API_KEY}` : "";
+};
+
+export const identifyPlantSpecimen = async (base64Image: string, mimeType: string, lang: Language = 'bn'): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: [{ parts: [{ inlineData: { data: base64Image, mimeType } }, { text: `Identify this agricultural plant. Site: gov.bd. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.` }] }],
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
+  });
+};
+
+export const getPersonalizedAgriAdvice = async (crops: UserCrop[], rank: string, preferredCategories?: string[], lang: Language = 'bn') => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Advisory for a ${rank} farmer growing: ${crops.map(c => c.name).join(', ')}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return response.text || "";
+  });
+};
+
+export const getAIYieldPrediction = async (crop: string, aez: string, soilStatus?: string, practice?: string, water?: string, notes?: string, rank?: string, dynamicInputs?: any, lang: Language = 'bn') => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Yield forecast for ${crop} in ${aez} based on ${JSON.stringify(dynamicInputs)}. Practice: ${practice}. Water: ${water}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "" };
+  });
+};
+
+export const getAgriPodcastSummary = async (topic: string, lang: Language = 'bn'): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Agri podcast script for topic: ${topic}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
+  });
+};
+
+export const requestSoilPrecisionParameters = async (inputs: any, region: string, lang: Language = 'bn'): Promise<any[]> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Clarify soil audit for inputs ${JSON.stringify(inputs)} in ${region}. Generate 3-5 JSON questions. Types: "select", "number", "text", "date". Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return extractJSON<any[]>(response.text || "[]", []);
+  });
+};
+
+export const requestPesticidePrecisionParameters = async (query: string, lang: Language = 'bn'): Promise<any[]> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const prompt = `Pesticide Expert Query: "${query}". 
+    To provide 100% precise DAE dosage and safety protocol, generate 3-5 follow-up questions. 
+    Support types: "select" (include options), "date", "text", "number".
+    JSON Format: [{ "id": string, "label": "Question in ${lang}", "type": string, "options": [] if select, "hint": string }]`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: { responseMimeType: "application/json" }
+    });
+    return extractJSON<any[]>(response.text || "[]", []);
+  });
+};
+
+export const performDeepPesticideAudit = async (query: string, dynamicData: Record<string, string>, lang: Language = 'bn'): Promise<{ text: string, groundingChunks: GroundingChunk[] }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const prompt = `Deep Pesticide Audit for: "${query}".
+    User context: ${JSON.stringify(dynamicData)}.
+    Provide official DAE/IRAC compliant advice in ${lang === 'bn' ? 'Bangla' : 'English'}. Source: dae.gov.bd.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: prompt,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
+  });
+};
+
+export const performDeepSoilAudit = async (inputs: any, region: string, dynamicData: Record<string, string>, lang: Language = 'bn'): Promise<string> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const prompt = `Deep Soil Health Audit. Inputs: ${JSON.stringify(inputs)}. Region: ${region}. Context: ${JSON.stringify(dynamicData)}.
+    Using BARC 2024 standards, provide specialized advice in ${lang === 'bn' ? 'Bangla' : 'English'}.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: prompt,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return response.text || "";
+  });
+};
+
+export const generateAgriQuiz = async (topic: string, lang: Language = 'bn'): Promise<AgriQuizQuestion[]> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Generate 5 multiple choice questions on "${topic}" for farmers. Return JSON array of objects: {question, options: [4 strings], correctAnswer: number(0-3), explanation}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return extractJSON<AgriQuizQuestion[]>(response.text || "[]", []);
+  });
+};
+
+export const searchEncyclopedia = async (term: string, lang: Language = 'bn'): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Explain "${term}" in the context of Bangladesh agriculture. Provide a detailed definition, usage, and importance. Respond in ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
+  });
+};
+
+export const getAISprayAdvisory = async (crop: string, pest: string, weather: WeatherData, lang: Language = 'bn'): Promise<{ text: string, groundingChunks: GroundingChunk[] }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Safe to spray for ${pest} in ${crop}? Weather: ${JSON.stringify(weather)}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
+  });
+};
+
+export const getLCCAnalysisSummary = async (lccValue: number, tsr: number, dose: string, lang: Language = 'bn'): Promise<string> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Rice LCC is ${lccValue}, N dose is ${dose}. Explain briefly for farmer. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`
+    });
+    return response.text || "";
+  });
+};
+
+export const getCropDiseaseInfo = async (crop: string, lang: Language = 'bn'): Promise<{ data: CropDiseaseReport }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `DAI/BARI info for "${crop}". JSON format: {cropName, summary, diseases:[], pests:[]}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return { data: extractJSON<any>(response.text || "{}", {}) };
+  });
+};
+
+export const getAgriMetaExplanation = async (query: string, lang: Language = 'bn'): Promise<string> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `How Krishi AI sources info for ${query}? Site: gov.bd. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`
+    });
+    return response.text || "";
+  });
+};
+
+export const generateGroundedWeatherReport = async (location: string, lang: Language = 'bn'): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `BMD/BAMIS report for ${location}. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
+  });
+};
+
+export const getBiocontrolExpertAdvice = async (query: string, lang: Language = 'bn'): Promise<string> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Biological control for ${query} in Bangladesh. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return response.text || "";
+  });
+};
+
+export const interpretSoilReportAI = async (inputs: { ph: string; n: string; p: string; k: string }, lang: Language = 'bn'): Promise<string> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Interpret soil lab data: ${JSON.stringify(inputs)}. BARC 2024 standards. Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return response.text || "";
+  });
+};
+
+export const getFieldMonitoringData = async (lat: number, lng: number, aezName: string, lang: Language = 'bn'): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Satellite biomass & NDVI for ${lat}, ${lng} (AEZ: ${aezName}). Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+    return { text: response.text || "", groundingChunks: (response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) || [] };
+  });
 };

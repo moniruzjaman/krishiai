@@ -7,6 +7,8 @@ import { AGRI_SEASONS } from '../constants';
 interface TaskSchedulerProps {
   user: User;
   onAction?: () => void;
+  // Fix: Added missing onBack prop
+  onBack?: () => void;
 }
 
 const STORAGE_KEY = 'agritech_tasks';
@@ -19,7 +21,7 @@ const schedulerLoadingSteps = [
   "আগামী দিনগুলোর জন্য প্রয়োজনীয় কাজের তালিকা চূড়ান্ত হচ্ছে..."
 ];
 
-const TaskScheduler: React.FC<TaskSchedulerProps> = ({ user, onAction }) => {
+const TaskScheduler: React.FC<TaskSchedulerProps> = ({ user, onAction, onBack }) => {
   const [tasks, setTasks] = useState<AgriTask[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -148,9 +150,15 @@ const TaskScheduler: React.FC<TaskSchedulerProps> = ({ user, onAction }) => {
   return (
     <div className="max-w-4xl mx-auto p-4 pb-32 font-sans animate-fade-in min-h-screen">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-gray-800 tracking-tight">শস্য কর্মপরিকল্পনা</h1>
-          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1">Smart Task Scheduler & Planner</p>
+        <div className="flex items-center space-x-4">
+          {/* Fix: Added back button usage */}
+          <button onClick={() => onBack?.()} className="p-3 bg-white rounded-2xl shadow-sm border hover:bg-slate-50 transition-all active:scale-90 text-slate-400">
+            <svg className="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          </button>
+          <div>
+            <h1 className="text-3xl font-black text-gray-800 tracking-tight">শস্য কর্মপরিকল্পনা</h1>
+            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1">Smart Task Scheduler & Planner</p>
+          </div>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
           <button 

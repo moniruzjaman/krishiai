@@ -1,10 +1,13 @@
+
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { User, UserProgress, UserSettings, UserCrop, SavedReport } from '../types';
-import { CROPS_BY_CATEGORY, CROP_CATEGORIES } from '../constants';
-import { getPersonalizedAgriAdvice } from '../services/geminiService';
-import { detectCurrentAEZDetails } from '../services/locationService';
+import { User, UserProgress, UserSettings, UserCrop, SavedReport, UserRole, GroundingChunk } from '../types';
+import { CROPS_BY_CATEGORY, DISTRICT_UPAZILA_MAP } from '../constants';
+import { searchNearbySellers } from '../services/geminiService';
+import { detectCurrentAEZDetails, getStoredLocation, saveStoredLocation } from '../services/locationService';
 import ShareDialog from './ShareDialog';
 import FeedbackModal from './FeedbackModal';
+import { useSpeech } from '../App';
+import { FarmerAvatar } from './FarmerAvatar';
 
 interface UserProfileProps {
   user: User;
@@ -12,50 +15,46 @@ interface UserProfileProps {
   onSaveReport?: (report: Omit<SavedReport, 'id' | 'timestamp'>) => void;
   onToggleSpeech: () => void;
   speechEnabled: boolean;
+  onBack?: () => void;
 }
 
-const DISTRICTS = [
-  'Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogra', 'Brahmanbaria', 'Chandpur', 
-  'Chapai Nawabganj', 'Chattogram', 'Chuadanga', 'Comilla', 'Cox\'s Bazar', 'Dhaka', 'Dinajpur', 
-  'Faridpur', 'Feni', 'Gaibandha', 'Gazipur', 'Gopalganj', 'Habiganj', 'Jamalpur', 'Jessore', 
-  'Jhalokati', 'Jhenaidah', 'Joypurhat', 'Khagrachari', 'Khulna', 'Kishoreganj', 'Kurigram', 
-  'Kushtia', 'Lakshmipur', 'Lalmonirhat', 'Madaripur', 'Magura', 'Manikganj', 'Meherpur', 
-  'Moulvibazar', 'Munshiganj', 'Mymensingh', 'Naogaon', 'Narail', 'Narayanganj', 'Narsingdi', 
-  'Natore', 'Netrokona', 'Nilphamari', 'Noakhali', 'Pabna', 'Panchagarh', 'Patuakhali', 
-  'Pirojpur', 'Rajbari', 'Rajshahi', 'Rangamati', 'Rangpur', 'Satkhira', 'Shariatpur', 
-  'Sherpur', 'Sirajganj', 'Sunamganj', 'Sylhet', 'Tangail', 'Thakurgaon'
-].sort();
+const ROLES: { id: UserRole, label: string, icon: string }[] = [
+  { id: 'farmer_entrepreneur', label: 'কৃষক / উদ্যোক্তা', icon: '👨‍🌾' },
+  { id: 'policy_maker', label: 'কৃষি নীতি নির্ধারক', icon: '🏛️' },
+  { id: 'extension_provider', label: 'সম্প্রসারণ কর্মী', icon: '📋' },
+  { id: 'input_seller', label: 'উপকরণ বিক্রেতা', icon: '🛍️' },
+  { id: 'others', label: 'অন্যান্য', icon: '👥' },
+];
 
 const RANKS = [
   { level: 0, title: 'নবিশ কৃষক', xp: 0, icon: '🌱' },
   { level: 5, title: 'উন্নয়নশীল কৃষক', xp: 500, icon: '🌿' },
   { level: 10, title: 'অভিজ্ঞ কৃষক', xp: 2000, icon: '🌳' },
-  { level: 20, title: 'মাস্টার এগ্রোনোমিস্ট', xp: 10000, icon: '🎓' },
+  { level: 20, title: 'মাস্টার এগ্রোনোমিস্ট', xp: 10000, icon: '👑' },
 ];
 
-const SKILL_ROADMAP = [
-  { id: 'soil_health', title: 'মৃত্তিকা স্বাস্থ্য', icon: '🏺', category: 'soil', xpRequired: 100 },
-  { id: 'pest_id', title: 'বালাই শনাক্তকরণ', icon: '🔍', category: 'protection', xpRequired: 200 },
-  { id: 'nutrient_mgmt', title: 'পুষ্টি ব্যবস্থাপনা', icon: '⚖️', category: 'soil', xpRequired: 500 },
-  { id: 'smart_irrigation', title: 'স্মার্ট সেচ', icon: '💧', category: 'technology', xpRequired: 800 },
-  { id: 'pesticide_safety', title: 'নিরাপদ বালাইনাশক', icon: '🧪', category: 'protection', xpRequired: 1200 },
-  { id: 'yield_predict', title: 'ফলন পূর্বাভাস', icon: '🔮', category: 'technology', xpRequired: 2000 },
-];
+const DISTRICTS = Object.keys(DISTRICT_UPAZILA_MAP).sort();
 
-const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdateUser, onSaveReport, onToggleSpeech, speechEnabled }) => {
-  const { progress, myCrops = [], savedReports = [], preferredCategories = [] } = user;
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'skills' | 'saved' | 'settings'>('overview');
-  const [selectedCategory, setSelectedCategory] = useState('cereals');
+const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdateUser, onSaveReport, onToggleSpeech, speechEnabled, onBack }) => {
+  const { progress, myCrops = [], savedReports = [], settings } = user;
+  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'map' | 'activity' | 'fields' | 'settings'>('dashboard');
   
+  // Map States
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearbyResults, setNearbyResults] = useState<{ text: string; groundingChunks: GroundingChunk[] } | null>(null);
+  const [isMapLoading, setIsMapLoading] = useState(false);
+  const [mapQuery, setMapQuery] = useState('Agri input seller');
+  const [selectedFieldId, setSelectedFieldId] = useState<string | 'current'>('current');
+  const [mapZoom, setMapZoom] = useState(16);
+
   const [showAddCropModal, setShowAddCropModal] = useState(false);
   const [newCropName, setNewCropName] = useState('');
   const [newCropVariety, setNewCropVariety] = useState('');
   const [newCropDate, setNewCropDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newCropLocation, setNewCropLocation] = useState(user.farmLocation ? `${user.farmLocation.upazila}, ${user.farmLocation.district}` : '');
+  const [newCropLocation, setNewCropLocation] = useState('');
+  const [newCropCoords, setNewCropCoords] = useState<{lat: number, lng: number} | null>(null);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
-  const [advice, setAdvice] = useState<string | null>(null);
-  const [isAdviceLoading, setIsAdviceLoading] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isListeningField, setIsListeningField] = useState<string | null>(null);
@@ -64,79 +63,91 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdateUser, onSaveRep
   const [mobileInput, setMobileInput] = useState(user.mobile || '');
   const [districtInput, setDistrictInput] = useState(user.farmLocation?.district || '');
   const [upazilaInput, setUpazilaInput] = useState(user.farmLocation?.upazila || '');
+  const [selectedRole, setSelectedRole] = useState<UserRole>(user.role || 'farmer_entrepreneur');
   const [hasChanges, setHasChanges] = useState(false);
 
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { playSpeech, stopSpeech, isSpeaking } = useSpeech();
   const recognitionRef = useRef<any>(null);
 
+  // Real-time tracking logic
   useEffect(() => {
+    const loc = getStoredLocation();
+    if (loc) setCoords({ lat: loc.lat, lng: loc.lng });
+    
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.lang = 'bn-BD';
-      recognitionRef.current.onstart = () => {};
+    }
+
+    let watchId: number;
+    if (navigator.geolocation && activeSubTab === 'map') {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const newCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          if (selectedFieldId === 'current') {
+            setCoords(newCoords);
+          }
+          saveStoredLocation(newCoords.lat, newCoords.lng);
+        },
+        (err) => console.error("Tracking error:", err),
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [activeSubTab, selectedFieldId]);
+
+  const toggleListening = (field: string) => {
+    if (!recognitionRef.current) return alert("ভয়েস ইনপুট সমর্থিত নয়।");
+    if (isListeningField === field) {
+      recognitionRef.current.stop();
+    } else {
+      setIsListeningField(field);
+      recognitionRef.current.start();
+    }
+  };
+
+  useEffect(() => {
+    if (recognitionRef.current) {
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        if (isListeningField === 'name') setNameInput(prev => prev + ' ' + transcript);
-        if (isListeningField === 'upazila') setUpazilaInput(prev => prev + ' ' + transcript);
-        if (isListeningField === 'cropVariety') setNewCropVariety(prev => prev + ' ' + transcript);
-        if (isListeningField === 'cropLocation') setNewCropLocation(prev => prev + ' ' + transcript);
+        if (isListeningField === 'name') setNameInput(prev => prev + transcript);
+        if (isListeningField === 'cropVariety') setNewCropVariety(prev => prev + transcript);
         setHasChanges(true);
       };
-      recognitionRef.current.onerror = () => setIsListeningField(null);
       recognitionRef.current.onend = () => setIsListeningField(null);
     }
   }, [isListeningField]);
 
-  const toggleListening = (field: string) => {
-    if (!recognitionRef.current) return alert("ভয়েস ইনপুট সমর্থিত নয়।");
-    if (isListeningField === field) recognitionRef.current.stop();
-    else { setIsListeningField(field); recognitionRef.current.start(); }
-  };
-
-  const handleAvatarClick = () => fileInputRef.current?.click();
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => onUpdateUser({ photoURL: reader.result as string });
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleGetAdvice = async () => {
-    if (myCrops.length === 0) return;
-    setIsAdviceLoading(true);
+  const handleNearbySearch = async (type: string) => {
+    let targetCoords = activeMapCoords;
+    if (!targetCoords) return;
+    
+    setMapQuery(type);
+    setIsMapLoading(true);
     try {
-      const res = await getPersonalizedAgriAdvice(myCrops, progress.rank || 'নবিশ কৃষক', preferredCategories);
-      setAdvice(res);
+      const data = await searchNearbySellers(targetCoords.lat, targetCoords.lng, type, 'bn');
+      setNearbyResults(data);
+      setMapZoom(15);
     } catch (e) {
-      setAdvice("পরামর্শ তৈরি করা সম্ভব হয়নি।");
+      alert("Search failed.");
     } finally {
-      setIsAdviceLoading(false);
+      setIsMapLoading(false);
     }
   };
 
-  const handleSaveAdvice = () => {
-    if (advice && onSaveReport) {
-      onSaveReport({
-        type: 'Personalized Advisory',
-        title: 'আমার ব্যক্তিগত পরামর্শ',
-        content: advice,
-        icon: '💡'
-      });
-    }
-  };
-
-  const togglePreferredCategory = (catId: string) => {
-    const newPrefs = preferredCategories.includes(catId)
-      ? preferredCategories.filter(id => id !== catId)
-      : [...preferredCategories, catId];
-    onUpdateUser({ preferredCategories: newPrefs });
-    setHasChanges(true);
+  const handleDetectLocationForCrop = async () => {
+    setIsDetectingLocation(true);
+    try {
+      const aez = await detectCurrentAEZDetails(true);
+      setNewCropLocation(`${aez.name} (AEZ ${aez.id})`);
+      setNewCropCoords({ lat: aez.lat, lng: aez.lng });
+    } catch (err) { alert('লোকেশন পাওয়া যায়নি।'); } finally { setIsDetectingLocation(false); }
   };
 
   const handleAddCrop = () => {
@@ -144,23 +155,32 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdateUser, onSaveRep
     const newCrop: UserCrop = {
       id: Math.random().toString(36).substr(2, 9),
       name: newCropName,
-      variety: newCropVariety || 'অজানা (Unknown)',
+      variety: newCropVariety || 'অজানা',
       sowingDate: newCropDate,
-      location: newCropLocation || 'অজানা (Unknown)'
+      location: newCropLocation || 'অজানা',
+      lat: newCropCoords?.lat,
+      lng: newCropCoords?.lng
     };
     onUpdateUser({ myCrops: [...myCrops, newCrop] });
     setShowAddCropModal(false);
     setNewCropName('');
     setNewCropVariety('');
-    setNewCropDate(new Date().toISOString().split('T')[0]);
+    setNewCropLocation('');
+    setNewCropCoords(null);
   };
 
-  const detectCropLocation = async () => {
-    setIsDetectingLocation(true);
-    try {
-      const aez = await detectCurrentAEZDetails(true);
-      setNewCropLocation(`${aez.name} (AEZ ${aez.id})`);
-    } catch (err) { alert('লোকেশন পাওয়া যায়নি।'); } finally { setIsDetectingLocation(false); }
+  const handleUpdateSettings = () => {
+    onUpdateUser({
+      displayName: nameInput,
+      mobile: mobileInput,
+      role: selectedRole,
+      farmLocation: {
+        district: districtInput,
+        upazila: upazilaInput
+      }
+    });
+    setHasChanges(false);
+    alert("আপনার প্রোফাইল আপডেট করা হয়েছে।");
   };
 
   const rankProgress = useMemo(() => {
@@ -170,225 +190,545 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdateUser, onSaveRep
     if (!nextRank) return { percent: 100, remaining: 0, nextTitle: 'সর্বোচ্চ স্তর' };
     const range = nextRank.xp - currentRank.xp;
     const currentXPInRange = progress.xp - currentRank.xp;
-    const percent = Math.min(100, Math.max(0, (currentXPInRange / range) * 100));
-    return { percent, remaining: nextRank.xp - progress.xp, nextTitle: nextRank.title };
+    return { percent: Math.min(100, Math.max(0, (currentXPInRange / range) * 100)), remaining: nextRank.xp - progress.xp, nextTitle: nextRank.title };
   }, [progress.xp, progress.rank]);
 
-  const handleSaveAccount = () => {
-    onUpdateUser({
-      displayName: nameInput,
-      mobile: mobileInput,
-      farmLocation: { district: districtInput, upazila: upazilaInput },
-      settings: { ...user.settings, theme: userSettings.theme } as UserSettings
-    });
-    setHasChanges(false);
-    alert('সেটিংস সফলভাবে সংরক্ষিত হয়েছে!');
-  };
+  const activeMapCoords = useMemo(() => {
+    if (selectedFieldId === 'current') return coords;
+    const crop = myCrops.find(c => c.id === selectedFieldId);
+    if (crop?.lat && crop?.lng) return { lat: crop.lat, lng: crop.lng };
+    return coords;
+  }, [selectedFieldId, myCrops, coords]);
 
-  const toggleTheme = () => {
-    const currentSettings = user.settings || { theme: 'light', notifications: { weather: true, market: true, cropHealth: true } };
-    onUpdateUser({ settings: { ...currentSettings, theme: currentSettings.theme === 'light' ? 'dark' : 'light' } as UserSettings });
-  };
+  const mapEmbedUrl = useMemo(() => {
+    if (!activeMapCoords) return '';
+    // Build query: if focusing on a crop, use its name, otherwise use the search query
+    const focusCrop = myCrops.find(c => c.id === selectedFieldId);
+    const finalQuery = focusCrop ? focusCrop.name : mapQuery;
+    
+    return `https://www.google.com/maps/embed/v1/search?key=${process.env.API_KEY}&q=${encodeURIComponent(finalQuery)}&center=${activeMapCoords.lat},${activeMapCoords.lng}&zoom=${mapZoom}&maptype=satellite`;
+  }, [activeMapCoords, mapQuery, mapZoom, selectedFieldId, myCrops]);
 
-  const userSettings = user.settings || { theme: 'light', notifications: { weather: true, market: true, cropHealth: true } };
+  const upazilas = districtInput ? DISTRICT_UPAZILA_MAP[districtInput] || [] : [];
 
   return (
-    <div className={`max-w-7xl mx-auto p-4 pb-32 animate-fade-in font-sans transition-colors duration-500 ${userSettings.theme === 'dark' ? 'dark' : ''}`}>
-      {isShareOpen && <ShareDialog isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} title="ব্যক্তিগত কৃষি প্রোফাইল" content={advice || ""} />}
+    <div className={`max-w-7xl mx-auto p-4 pb-32 animate-fade-in font-sans transition-all duration-500 ${settings?.theme === 'dark' ? 'dark' : ''}`}>
+      {isShareOpen && <ShareDialog isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} title="কৃষি প্রোফাইল" content={`Farmer Rank: ${progress.rank}`} />}
       <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} userRank={progress.rank} />
       
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
-        <div className="flex items-center space-x-4">
-          <button onClick={() => window.history.back()} className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-90 text-slate-400">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+      {/* Brand Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-6 px-2">
+        <div className="flex items-center space-x-6">
+          <button onClick={() => { stopSpeech(); onBack ? onBack() : window.history.back(); }} className="p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700 hover:bg-emerald-50 transition-all active:scale-90 text-slate-400 group">
+            <svg className="h-6 w-6 group-hover:text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
           <div>
-            <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter">অ্যাগ্রোনোমিস্ট ড্যাশবোর্ড</h1>
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Smart Farming Career Track</p>
+            <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter leading-none">কমান্ড সেন্টার</h1>
+            <p className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.3em] mt-2">Krishi AI Official Dashboard</p>
           </div>
         </div>
-        <div className="flex items-center space-x-3 w-full md:w-auto">
-          <div className="bg-emerald-50 dark:bg-emerald-900/30 px-4 py-2 rounded-2xl border border-emerald-100 dark:border-emerald-800 flex items-center space-x-2">
-            <span className="text-lg">🔥</span>
-            <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">{progress.streak} দিন স্ট্রিক</span>
-          </div>
-          <button onClick={() => setIsFeedbackOpen(true)} className="flex-1 md:flex-none bg-slate-900 dark:bg-emerald-600 text-white px-6 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all">ফিডব্যাক</button>
-        </div>
-      </div>
-
-      <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-[2rem] mb-8 max-w-lg overflow-x-auto scrollbar-hide">
-        <button onClick={() => setActiveSubTab('overview')} className={`flex-1 min-w-[100px] py-3 text-[10px] font-black uppercase tracking-widest rounded-[1.5rem] transition-all ${activeSubTab === 'overview' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-md' : 'text-slate-400'}`}>প্রোফাইল</button>
-        <button onClick={() => setActiveSubTab('skills')} className={`flex-1 min-w-[100px] py-3 text-[10px] font-black uppercase tracking-widest rounded-[1.5rem] transition-all ${activeSubTab === 'skills' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-md' : 'text-slate-400'}`}>দক্ষতা</button>
-        <button onClick={() => setActiveSubTab('saved')} className={`flex-1 min-w-[100px] py-3 text-[10px] font-black uppercase tracking-widest rounded-[1.5rem] transition-all ${activeSubTab === 'saved' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-md' : 'text-slate-400'}`}>রিপোর্টসমূহ</button>
-        <button onClick={() => setActiveSubTab('settings')} className={`flex-1 min-w-[100px] py-3 text-[10px] font-black uppercase tracking-widest rounded-[1.5rem] transition-all ${activeSubTab === 'settings' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-md' : 'text-slate-400'}`}>সেটিংস</button>
-      </div>
-
-      {activeSubTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
-          <div className="lg:col-span-4 space-y-8">
-            <div className="bg-white dark:bg-slate-800 rounded-[3.5rem] p-10 shadow-2xl border border-slate-100 dark:border-slate-700 flex flex-col items-center text-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-[#0A8A1F] to-emerald-400 opacity-10"></div>
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-              <div className="relative mt-8 mb-6 group">
-                <div className="w-40 h-40 rounded-[3.5rem] border-[10px] border-white dark:border-slate-800 shadow-2xl overflow-hidden relative transition-transform duration-500 group-hover:scale-105">
-                  <img src={user.photoURL || ''} className="w-full h-full object-cover bg-slate-50 dark:bg-slate-900" alt="Profile" />
-                  <button onClick={handleAvatarClick} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
-                    <svg className="w-8 h-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812-1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><circle cx="12" cy="13" r="3" /></svg>
-                    <span className="font-black text-[9px] uppercase tracking-widest">ছবি পরিবর্তন</span>
-                  </button>
-                </div>
-                <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-slate-900 w-14 h-14 rounded-[1.8rem] flex items-center justify-center text-3xl shadow-2xl border-4 border-white dark:border-slate-800 animate-pulse">
-                  {RANKS.find(r => r.title === progress.rank)?.icon || '🌱'}
-                </div>
-              </div>
-              <div>
-                <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{user.displayName || 'কৃষক বন্ধু'}</h2>
-                <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-2">{progress.rank || 'নবিশ কৃষক'} • লেভেল {progress.level}</p>
-              </div>
-              <div className="w-full mt-10 space-y-3">
-                <div className="flex justify-between items-end text-[10px] font-black uppercase tracking-widest">
-                  <span className="text-emerald-600 dark:text-emerald-400">বর্তমান প্রগতি</span>
-                  <span className="text-slate-400 dark:text-slate-500">পরবর্তী: {rankProgress.nextTitle}</span>
-                </div>
-                <div className="h-4 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden p-1 shadow-inner">
-                  <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-1000 shadow-sm relative" style={{ width: `${rankProgress.percent}%` }}></div>
-                </div>
-              </div>
+        <div className="flex items-center gap-3">
+            <div className="bg-emerald-600 text-white px-6 py-3 rounded-2xl shadow-xl flex items-center space-x-3 border-b-4 border-emerald-800 active:scale-95 transition-all cursor-default">
+              <span className="text-xl">🔥</span>
+              <span className="text-sm font-black uppercase tracking-widest">{progress.streak} দিন স্ট্রিক</span>
             </div>
-            <div className="bg-slate-900 dark:bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl relative overflow-hidden">
-               <h3 className="text-lg font-black mb-6 flex items-center tracking-tight"><span className="mr-3">🏅</span> অর্জন ও ব্যাজসমূহ</h3>
-               <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { id: 'soil_1', title: 'মৃত্তিকা মিত্র', icon: '🏺', unlocked: progress.skills.soil > 100, desc: '১০০+ XP ইন সয়েল সায়েন্স' },
-                    { id: 'pest_1', title: 'বালাই নাশক', icon: '🛡️', unlocked: progress.skills.protection > 100, desc: '১০০+ XP ইন শস্য সুরক্ষা' },
-                    { id: 'tech_1', title: 'স্মার্ট অ্যাগ্রো', icon: '🛰️', unlocked: progress.skills.technology > 100, desc: '১০০+ XP ইন এগ্রি-টেক' },
-                    { id: 'streak_1', title: 'অদম্য কৃষক', icon: '🔥', unlocked: progress.streak >= 7, desc: '৭ দিনের ধারাবাহিকতা' },
-                  ].map(ach => (
-                    <div key={ach.id} className={`p-4 rounded-2xl border-2 transition-all group ${ach.unlocked ? 'bg-white/10 border-emerald-500/50' : 'bg-white/5 border-white/5 opacity-40 grayscale'}`}>
-                      <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">{ach.icon}</div>
-                      <p className="text-[10px] font-black uppercase tracking-tight leading-tight">{ach.title}</p>
-                      <p className="text-[7px] text-slate-500 font-medium mt-1">{ach.desc}</p>
+        </div>
+      </div>
+
+      {/* Modern Navigation Pills */}
+      <div className="flex bg-white dark:bg-slate-900 p-2 rounded-[2.5rem] shadow-xl mb-12 max-w-3xl overflow-x-auto scrollbar-hide border border-slate-100 dark:border-slate-800 mx-auto">
+        <NavPill id="dashboard" label="ড্যাশবোর্ড" icon="📊" active={activeSubTab} onClick={setActiveSubTab} />
+        <NavPill id="map" label="ফিল্ড ও হাব" icon="📍" active={activeSubTab} onClick={setActiveSubTab} />
+        <NavPill id="activity" label="অ্যাক্টিভিটি" icon="📜" active={activeSubTab} onClick={setActiveSubTab} />
+        <NavPill id="fields" label="আমার শস্য" icon="🌾" active={activeSubTab} onClick={setActiveSubTab} />
+        <NavPill id="settings" label="সেটিংস" icon="⚙️" active={activeSubTab} onClick={setActiveSubTab} />
+      </div>
+
+      {/* Dashboard Tab Content */}
+      {activeSubTab === 'dashboard' && (
+        <div className="animate-fade-in space-y-8">
+           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* Profile Overview Card */}
+              <div className="lg:col-span-4">
+                 <div className="bg-white dark:bg-slate-800 rounded-[4rem] p-10 shadow-2xl border border-slate-100 dark:border-slate-700 flex flex-col items-center text-center relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-br from-[#0A8A1F] to-emerald-400 opacity-10 group-hover:opacity-20 transition-opacity"></div>
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
+                    
+                    <FarmerAvatar user={user} size="xl" showProgress={true} className="relative z-10" />
+                    
+                    <div className="mt-8 relative z-10">
+                      <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{user.displayName}</h2>
+                      <p className="text-xs font-black text-emerald-600 uppercase tracking-[0.2em] mt-2">{progress.rank}</p>
+                    </div>
+
+                    <div className="w-full mt-10 space-y-4 relative z-10">
+                      <div className="flex justify-between items-end mb-1 px-1">
+                         <span className="text-[10px] font-black text-slate-400 uppercase">XP প্রগতি ({progress.xp})</span>
+                         <span className="text-[10px] font-black text-emerald-600 uppercase">লেভেল {progress.level}</span>
+                      </div>
+                      <div className="h-4 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden p-1 shadow-inner">
+                        <div className="h-full bg-gradient-to-r from-[#0A8A1F] to-emerald-400 rounded-full shadow-[0_0_10px_rgba(10,138,31,0.5)] transition-all duration-1000" style={{ width: `${rankProgress.percent}%` }}></div>
+                      </div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center mt-2">পরবর্তী লক্ষ্য: {rankProgress.nextTitle} ({rankProgress.remaining} XP বাকি)</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 w-full mt-10">
+                       <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-3xl border border-slate-100 dark:border-slate-700">
+                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">মোট শস্য</p>
+                          <p className="text-2xl font-black text-slate-800 dark:text-white">{myCrops.length}</p>
+                       </div>
+                       <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-3xl border border-slate-100 dark:border-slate-700">
+                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">মোট রিপোর্ট</p>
+                          <p className="text-2xl font-black text-slate-800 dark:text-white">{savedReports.length}</p>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              {/* Skills Integration */}
+              <div className="lg:col-span-8 space-y-8">
+                 <div className="bg-slate-900 rounded-[4rem] p-10 md:p-14 text-white shadow-2xl relative overflow-hidden border-b-[20px] border-emerald-600">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                    <div className="relative z-10">
+                       <div className="flex items-center space-x-4 mb-10">
+                          <div className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center text-3xl shadow-xl">💪</div>
+                          <div>
+                             <h3 className="text-3xl font-black tracking-tight">আপনার দক্ষতা প্রোফাইল</h3>
+                             <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em]">Skill Mastery Sync</p>
+                          </div>
+                       </div>
+
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                          <SkillBar label="মৃত্তিকা ও সার ব্যবস্থাপনা" val={progress.skills.soil} color="emerald" icon="🏺" />
+                          <SkillBar label="শস্য সুরক্ষা ও রোগ নির্ণয়" val={progress.skills.protection} color="rose" icon="🛡️" />
+                          <SkillBar label="আধুনিক কৃষি প্রযুক্তি" val={progress.skills.technology} color="blue" icon="🛰️" />
+                          <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 flex flex-col justify-center items-center text-center">
+                             <p className="text-xs font-black text-emerald-400 uppercase mb-3">এগ্রো-মাস্টারি স্কোর</p>
+                             <h4 className="text-5xl font-black tracking-tighter">
+                                {Math.round((progress.skills.soil + progress.skills.protection + progress.skills.technology) / 3)}%
+                             </h4>
+                             <p className="text-[9px] font-medium text-slate-400 mt-3 italic">"নিয়মিত ডায়াগনোসিস করে আপনার সুরক্ষা দক্ষতা বাড়ান"</p>
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* Recent Insight Summary */}
+                 <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 shadow-xl border border-slate-100 dark:border-slate-700 flex flex-col md:flex-row items-center gap-10">
+                    <div className="w-24 h-24 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-5xl shadow-inner shrink-0">✨</div>
+                    <div className="text-center md:text-left flex-1">
+                       <h4 className="text-xl font-black text-slate-800 dark:text-white mb-2">এআই স্মার্ট টিপস</h4>
+                       <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+                          {myCrops.length > 0 
+                            ? `আপনার ${myCrops[0].name} ক্ষেতের জন্য বর্তমান আবহাওয়া অনুযায়ী ইউরিয়া প্রয়োগের এখনই উপযুক্ত সময়।`
+                            : "আপনার খামারের প্রথম শস্য যোগ করুন এবং বিশেষায়িত এআই পরামর্শ পেতে শুরু করুন।"}
+                       </p>
+                    </div>
+                    <button 
+                      onClick={() => setActiveSubTab('fields')}
+                      className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl"
+                    >
+                      শস্য দেখুন
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Field & Hub (Maps) Tab */}
+      {activeSubTab === 'map' && (
+        <div className="animate-fade-in space-y-8 px-2">
+           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <div className="lg:col-span-8">
+                 <div className="bg-white dark:bg-slate-800 rounded-[3.5rem] p-5 shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden aspect-video relative group">
+                    {activeMapCoords ? (
+                      <iframe title="Farmer Hub Map" width="100%" height="100%" frameBorder="0" style={{ border: 0, borderRadius: '2.5rem' }} src={mapEmbedUrl} allowFullScreen></iframe>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full space-y-4 text-slate-400">
+                         <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                         <p className="font-black uppercase text-xs">Locating Field...</p>
+                      </div>
+                    )}
+                    <div className="absolute top-8 right-8 flex flex-col space-y-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button onClick={() => setMapZoom(prev => Math.min(prev + 1, 20))} className="p-3 bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-white text-slate-800 font-bold">+</button>
+                       <button onClick={() => setMapZoom(prev => Math.max(prev - 1, 10))} className="p-3 bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-white text-slate-800 font-bold">-</button>
+                       <button onClick={() => setSelectedFieldId('current')} className={`p-3 rounded-xl shadow-lg border transition-all ${selectedFieldId === 'current' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-white/90 text-slate-800 border-white'}`}>📍</button>
+                    </div>
+                    <div className="absolute bottom-8 right-8 bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-xl border border-white flex items-center space-x-3 pointer-events-none">
+                       <span className="relative flex h-3 w-3">
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${selectedFieldId === 'current' ? 'bg-emerald-400' : 'bg-blue-400'}`}></span>
+                          <span className={`relative inline-flex rounded-full h-3 w-3 ${selectedFieldId === 'current' ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
+                       </span>
+                       <span className="text-[10px] font-black uppercase text-slate-800 tracking-wider">
+                         {selectedFieldId === 'current' ? 'Live GPS Location' : 'Field View Focused'}
+                       </span>
+                    </div>
+                 </div>
+                 <div className="flex flex-wrap gap-4 mt-8">
+                    <MapQuickAction active={mapQuery === 'Agri Seed Store'} label="বীজ ভাণ্ডার" icon="🌱" onClick={() => handleNearbySearch('Agri Seed Store')} />
+                    <MapQuickAction active={mapQuery === 'Pesticide Store'} label="বালাইনাশক শপ" icon="🧪" onClick={() => handleNearbySearch('Pesticide Store')} />
+                    <MapQuickAction active={mapQuery === 'Fertilizer Retailer'} label="সার বিক্রেতা" icon="⚖️" onClick={() => handleNearbySearch('Fertilizer Retailer')} />
+                    <MapQuickAction active={mapQuery === 'Upazila Agriculture Office'} label="কৃষি অফিস" icon="🏛️" onClick={() => handleNearbySearch('Upazila Agriculture Office')} />
+                 </div>
+              </div>
+              <div className="lg:col-span-4">
+                 <div className="bg-slate-900 rounded-[3.5rem] p-10 text-white shadow-2xl h-full flex flex-col border-b-[16px] border-emerald-600">
+                    <h3 className="text-xl font-black mb-8 flex items-center"><span className="w-2 h-8 bg-emerald-500 rounded-full mr-4"></span>আমার খামার ও শস্য</h3>
+                    <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-hide">
+                       {myCrops.length > 0 ? (
+                         myCrops.map(crop => (
+                           <button 
+                             key={crop.id}
+                             onClick={() => { setSelectedFieldId(crop.id); setMapZoom(17); }}
+                             className={`w-full text-left p-6 rounded-[2.5rem] border transition-all flex items-center justify-between group ${selectedFieldId === crop.id ? 'bg-emerald-600 border-emerald-500 shadow-xl' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                           >
+                              <div className="flex items-center space-x-4">
+                                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl ${selectedFieldId === crop.id ? 'bg-white text-emerald-600' : 'bg-white/10 text-white'}`}>🌾</div>
+                                 <div>
+                                    <h4 className="font-black text-sm mb-1">{crop.name}</h4>
+                                    <p className="text-[9px] font-bold text-slate-400 group-hover:text-emerald-100 uppercase tracking-widest">📍 {crop.location}</p>
+                                 </div>
+                              </div>
+                              {selectedFieldId === crop.id && <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>}
+                           </button>
+                         ))
+                       ) : (
+                         <div className="text-center py-10 opacity-30">
+                            <p className="text-xs italic">কোনো শস্য যোগ করা হয়নি।</p>
+                         </div>
+                       )}
+
+                       <div className="h-px bg-white/10 my-6"></div>
+                       
+                       <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center">
+                          <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
+                          নিকটস্থ হাব ফলাফল
+                       </h3>
+
+                       {isMapLoading ? (
+                         <div className="flex flex-col items-center justify-center py-20 opacity-50"><div className="w-8 h-8 border-2 border-emerald-50 border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-[10px] font-black uppercase">Syncing Maps...</p></div>
+                       ) : nearbyResults?.groundingChunks?.length ? (
+                         nearbyResults.groundingChunks.map((chunk, idx) => chunk.maps ? (
+                           <div key={idx} className="bg-white/5 border border-white/10 p-6 rounded-[2.5rem] hover:bg-white/10 transition-all cursor-pointer group" onClick={() => window.open(chunk.maps!.uri, '_blank')}>
+                              <h4 className="font-black text-sm mb-1 leading-tight group-hover:text-emerald-400 transition-colors">{chunk.maps.title}</h4>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center">
+                                 View Detail <svg className="w-3 h-3 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                              </p>
+                           </div>
+                         ) : null)
+                       ) : (
+                         <p className="text-center py-16 opacity-30 text-xs italic font-medium leading-relaxed">ক্যাটাগরি বেছে নিয়ে নিকটস্থ কেন্দ্রগুলো খুঁজুন।</p>
+                       )}
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Activity & Reports Tab */}
+      {activeSubTab === 'activity' && (
+        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in px-2">
+           <div className="flex items-center justify-between">
+              <h3 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">অ্যাক্টিভিটি ইতিহাস</h3>
+              <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-700 text-[10px] font-black uppercase text-slate-400">মোট {savedReports.length}টি রিপোর্ট</div>
+           </div>
+           
+           {savedReports.length > 0 ? (
+             <div className="grid grid-cols-1 gap-6">
+                {savedReports.map(report => (
+                  <div key={report.id} className="bg-white dark:bg-slate-800 rounded-[3rem] border border-slate-100 dark:border-slate-700 shadow-xl overflow-hidden transition-all hover:shadow-2xl group flex flex-col md:flex-row">
+                     {report.imageUrl && (
+                        <div className="md:w-64 h-64 md:h-auto overflow-hidden shrink-0">
+                           <img src={report.imageUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={report.title} />
+                        </div>
+                     )}
+                     <div className="p-10 flex-1 relative">
+                        <div className="flex justify-between items-start mb-6">
+                           <div>
+                              <div className="flex items-center space-x-3 mb-2">
+                                 <span className="text-3xl">{report.icon || '📝'}</span>
+                                 <span className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">{report.type}</span>
+                              </div>
+                              <h4 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight leading-tight">{report.title}</h4>
+                              <p className="text-[9px] font-black text-slate-400 uppercase mt-2 bg-slate-50 dark:bg-slate-900 inline-block px-2 py-0.5 rounded">
+                                 {new Date(report.timestamp).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                           </div>
+                           <div className="flex items-center space-x-2">
+                              {report.audioBase64 && (
+                                <button 
+                                  onClick={() => playSpeech(report.content, report.audioBase64)}
+                                  className={`p-4 rounded-2xl transition-all ${isSpeaking ? 'bg-rose-500 text-white animate-pulse shadow-rose-200' : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white shadow-emerald-100'}`}
+                                >
+                                   🔊
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => setExpandedReportId(expandedReportId === report.id ? null : report.id)}
+                                className={`p-4 rounded-2xl transition-all ${expandedReportId === report.id ? 'bg-slate-900 text-white' : 'bg-slate-50 dark:bg-slate-900 text-slate-400'}`}
+                              >
+                                 <svg className={`w-5 h-5 transform transition-transform ${expandedReportId === report.id ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                              </button>
+                           </div>
+                        </div>
+                        
+                        <div className={`overflow-hidden transition-all duration-500 ${expandedReportId === report.id ? 'max-h-[1000px] opacity-100' : 'max-h-[60px] opacity-60'}`}>
+                           <p className="text-base font-medium leading-relaxed text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
+                             {report.content}
+                           </p>
+                        </div>
+                        {expandedReportId !== report.id && (
+                           <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none"></div>
+                        )}
+                     </div>
+                  </div>
+                ))}
+             </div>
+           ) : (
+             <div className="bg-white dark:bg-slate-800 rounded-[4rem] p-24 text-center border-4 border-dashed border-slate-100 dark:border-slate-700 opacity-40">
+                <div className="text-8xl mb-8">📂</div>
+                <p className="font-black text-slate-400 uppercase tracking-widest">এখনো কোনো রিপোর্ট সংরক্ষিত নেই</p>
+             </div>
+           )}
+        </div>
+      )}
+
+      {/* Field Management Tab */}
+      {activeSubTab === 'fields' && (
+        <div className="animate-fade-in space-y-8 px-2">
+           <div className="bg-white dark:bg-slate-800 rounded-[4rem] p-10 md:p-14 shadow-2xl border border-slate-100 dark:border-slate-700">
+              <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
+                <div>
+                   <h3 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">আমার খামার ও শস্য প্রোফাইল</h3>
+                   <p className="text-xs font-medium text-slate-400 mt-2">আপনার চাষকৃত শস্যগুলো এখানে পরিচালনা করুন</p>
+                </div>
+                <button onClick={() => setShowAddCropModal(true)} className="bg-[#0A8A1F] text-white px-10 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center space-x-3">
+                   <span>+ নতুন শস্য যোগ করুন</span>
+                </button>
+              </div>
+              
+              {myCrops.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {myCrops.map(c => (
+                    <div key={c.id} className="bg-slate-50 dark:bg-slate-900/50 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-700 flex items-start gap-6 group hover:border-emerald-500 transition-all shadow-sm hover:shadow-xl">
+                       <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-[1.8rem] flex items-center justify-center text-4xl shadow-lg transform group-hover:rotate-12 transition-transform">🌾</div>
+                       <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                             <h4 className="font-black text-2xl text-slate-800 dark:text-white leading-none mb-1">{c.name}</h4>
+                             <button className="text-slate-300 hover:text-rose-500 transition-colors">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                             </button>
+                          </div>
+                          <p className="text-[11px] font-black uppercase text-emerald-600 mb-3 tracking-widest">{c.variety}</p>
+                          <div className="space-y-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+                             <p className="text-[10px] font-bold text-slate-400 flex items-center uppercase tracking-tighter">
+                                <span className="mr-2">📍</span> {c.location}
+                             </p>
+                             <p className="text-[10px] font-bold text-slate-400 flex items-center uppercase tracking-tighter">
+                                <span className="mr-2">🗓️</span> রোপণ: {new Date(c.sowingDate).toLocaleDateString('bn-BD')}
+                             </p>
+                          </div>
+                       </div>
                     </div>
                   ))}
-               </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-8 space-y-8">
-            <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-8 md:p-10 shadow-xl border border-slate-100 dark:border-slate-700">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
-                 <div>
-                   <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">আমার চাষকৃত শস্য</h3>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Currently Growing Crops</p>
-                 </div>
-                 <button onClick={() => setShowAddCropModal(true)} className="bg-[#0A8A1F] text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center space-x-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
-                    <span>নতুন শস্য যোগ করুন</span>
-                 </button>
-              </div>
-              {myCrops.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-                  {myCrops.map(c => {
-                    const age = Math.floor((Date.now() - new Date(c.sowingDate).getTime()) / (1000 * 60 * 60 * 24));
-                    return (
-                      <div key={c.id} className="group relative bg-emerald-50 dark:bg-emerald-900/20 text-[#0A8A1F] dark:text-emerald-400 p-6 rounded-[2.5rem] border border-emerald-100 dark:border-emerald-800 flex items-start gap-4 shadow-sm hover:shadow-xl hover:bg-white dark:hover:bg-slate-700 transition-all">
-                        <div className="w-14 h-14 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center text-3xl shadow-sm transform group-hover:rotate-6 transition-transform">🌾</div>
-                        <div className="flex-1">
-                           <h4 className="font-black text-lg text-slate-800 dark:text-white leading-none mb-1">{c.name}</h4>
-                           <p className="text-[10px] font-black uppercase text-emerald-600 mb-3">{c.variety}</p>
-                           <p className="text-[9px] font-bold text-slate-400 uppercase">বয়স: {age} দিন</p>
-                        </div>
-                        <button onClick={() => onUpdateUser({ myCrops: myCrops.filter(item => item.id !== c.id) })} className="absolute -top-2 -right-2 w-8 h-8 bg-white dark:bg-slate-800 text-rose-500 rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-50 border border-rose-100">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                      </div>
-                    );
-                  })}
                 </div>
               ) : (
-                <div className="text-center py-20 bg-slate-50 dark:bg-slate-900/50 rounded-[3rem] border-4 border-dashed border-slate-100 dark:border-slate-800 mb-10 flex flex-col items-center opacity-60">
-                  <div className="text-6xl mb-6 grayscale">🚜</div>
-                  <p className="text-sm font-black text-slate-400 uppercase tracking-widest">এখনো কোনো চাষকৃত শস্য যোগ করা হয়নি</p>
+                <div className="text-center py-24 bg-slate-50 dark:bg-slate-900/50 rounded-[3rem] border-4 border-dashed border-slate-100 dark:border-slate-800 opacity-40">
+                  <div className="text-7xl mb-6">🏜️</div>
+                  <p className="font-black text-slate-400 uppercase tracking-widest">কোনো শস্য যোগ করা হয়নি</p>
                 </div>
               )}
-              <div className={`rounded-[3.5rem] p-10 relative overflow-hidden transition-all duration-1000 ${advice ? 'bg-slate-900 text-white shadow-2xl border-t-[16px] border-emerald-500' : 'bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-700'}`}>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 relative z-10 gap-6">
-                   <div>
-                     <h4 className={`text-2xl font-black ${advice ? 'text-emerald-400' : 'text-slate-800 dark:text-white'}`}>ব্যক্তিগত কৃষি পরামর্শ কেন্দ্র</h4>
-                     <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase">AI-Powered Farmer Intelligence</p>
-                   </div>
-                   <div className="flex items-center space-x-3 w-full md:w-auto">
-                     <button onClick={handleGetAdvice} disabled={isAdviceLoading || myCrops.length === 0} className={`flex-1 md:flex-none px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 shadow-xl disabled:opacity-30 ${advice ? 'bg-white text-slate-900 hover:bg-emerald-50' : 'bg-[#0A8A1F] text-white'}`}>
-                       {isAdviceLoading ? (<div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>) : advice ? 'নতুন পরামর্শ নিন' : 'পরামর্শ জেনারেট করুন'}
-                     </button>
-                     {advice && (
-                       <button onClick={handleSaveAdvice} className="p-4 rounded-full bg-emerald-600 text-white shadow-xl hover:bg-emerald-700 transition-all active:scale-90" title="সেভ করুন">
-                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 5h14m-14 0v14l7-7 7 7V5m-14 0h14" /></svg>
-                       </button>
-                     )}
-                   </div>
-                </div>
-                <div className="relative z-10">
-                  {advice && <div className="text-xl font-medium leading-relaxed whitespace-pre-wrap text-slate-200 prose prose-invert max-w-none">{advice}</div>}
+           </div>
+        </div>
+      )}
+
+      {/* Settings Tab Content (Simplified) */}
+      {activeSubTab === 'settings' && (
+        <div className="max-w-3xl mx-auto space-y-8 animate-fade-in px-2">
+           <div className="bg-white dark:bg-slate-800 rounded-[4rem] p-10 md:p-14 shadow-2xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-10">ব্যক্তিগত প্রোফাইল ও সেটিংস</h3>
+              
+              <div className="space-y-10">
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">আপনার নাম</label>
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        value={nameInput} 
+                        onChange={(e) => { setNameInput(e.target.value); setHasChanges(true); }} 
+                        className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-3xl py-5 px-8 font-black text-xl text-slate-800 dark:text-white outline-none focus:border-emerald-500 shadow-inner"
+                      />
+                      <button onClick={() => toggleListening('name')} className={`absolute right-5 top-1/2 -translate-y-1/2 p-3 rounded-2xl ${isListeningField === 'name' ? 'bg-red-500 text-white animate-pulse' : 'bg-white shadow-md text-slate-400'}`}>🎙️</button>
+                    </div>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">জেলা</label>
+                       <select 
+                         value={districtInput} 
+                         onChange={(e) => { setDistrictInput(e.target.value); setUpazilaInput(''); setHasChanges(true); }} 
+                         className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-[1.8rem] py-4 px-6 font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 shadow-inner appearance-none"
+                       >
+                         <option value="">জেলা নির্বাচন করুন</option>
+                         {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
+                       </select>
+                    </div>
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">উপজেলা</label>
+                       <select 
+                         value={upazilaInput} 
+                         disabled={!districtInput}
+                         onChange={(e) => { setUpazilaInput(e.target.value); setHasChanges(true); }} 
+                         className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-[1.8rem] py-4 px-6 font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 shadow-inner disabled:opacity-50 appearance-none"
+                       >
+                         <option value="">উপজেলা নির্বাচন করুন</option>
+                         {upazilas.map(u => <option key={u} value={u}>{u}</option>)}
+                       </select>
+                    </div>
+                 </div>
+
+                 <div className="space-y-6">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">আমার ভূমিকা</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                       {ROLES.map(role => (
+                         <button 
+                           key={role.id}
+                           onClick={() => { setSelectedRole(role.id); setHasChanges(true); }}
+                           className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center text-center gap-3 ${selectedRole === role.id ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-500 text-emerald-700 dark:text-emerald-400 shadow-lg scale-105' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400'}`}
+                         >
+                            <span className="text-3xl">{role.icon}</span>
+                            <span className="text-[10px] font-black uppercase tracking-tighter">{role.label}</span>
+                         </button>
+                       ))}
+                    </div>
+                 </div>
+
+                 <div className="pt-10">
+                    <button 
+                      onClick={handleUpdateSettings}
+                      disabled={!hasChanges}
+                      className={`w-full py-6 rounded-[2.2rem] font-black text-lg uppercase tracking-widest shadow-2xl transition-all active:scale-95 ${hasChanges ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                    >
+                      তথ্য সংরক্ষণ করুন
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Modern Add Crop Modal */}
+      {showAddCropModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-xl rounded-[4rem] shadow-[0_40px_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col border border-white/10 max-h-[90vh]">
+            <div className="bg-emerald-600 p-10 text-white flex justify-between items-center relative overflow-hidden shrink-0">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+              <div className="flex items-center space-x-5 relative z-10">
+                <span className="text-4xl">🌾</span>
+                <h3 className="text-3xl font-black tracking-tight leading-none">নতুন শস্য প্রোফাইল</h3>
+              </div>
+              <button onClick={() => setShowAddCropModal(false)} className="p-4 bg-white/20 rounded-2xl hover:bg-white/30 transition-all text-white relative z-10 shadow-lg active:scale-90">
+                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div className="p-10 space-y-8 overflow-y-auto scrollbar-hide">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">শস্য নির্বাচন করুন</label>
+                <select value={newCropName} onChange={(e) => setNewCropName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-3xl p-5 font-black text-lg text-slate-800 dark:text-white outline-none focus:border-emerald-500 shadow-inner appearance-none">
+                  <option value="">নির্বাচন করুন</option>
+                  {Object.values(CROPS_BY_CATEGORY).flat().sort().map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">জাত (Variety)</label>
+                <div className="relative">
+                  <input type="text" value={newCropVariety} onChange={(e) => setNewCropVariety(e.target.value)} placeholder="যেমন: ব্রি ধান২৮" className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-3xl p-5 pr-14 font-black text-lg text-slate-800 dark:text-white outline-none focus:border-emerald-500 shadow-inner" />
+                  <button onClick={() => toggleListening('cropVariety')} className={`absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-2xl shadow-md ${isListeningField === 'cropVariety' ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-slate-400'}`}>🎙️</button>
                 </div>
               </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">রোপণের তারিখ</label>
+                <input type="date" value={newCropDate} onChange={(e) => setNewCropDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-3xl p-5 font-black text-lg text-slate-800 dark:text-white outline-none focus:border-emerald-500 shadow-inner appearance-none" />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">ক্ষেতের অবস্থান (Field GPS)</label>
+                <div className="flex gap-3">
+                  <input type="text" readOnly value={newCropLocation || (isDetectingLocation ? 'শনাক্ত করা হচ্ছে...' : 'লোকেশন বাটন চাপুন')} className="flex-1 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-3xl p-5 text-sm font-black text-slate-500 shadow-inner overflow-hidden text-ellipsis whitespace-nowrap" />
+                  <button onClick={handleDetectLocationForCrop} disabled={isDetectingLocation} className={`w-16 rounded-3xl border-2 transition-all active:scale-95 flex items-center justify-center shadow-xl ${isDetectingLocation ? 'bg-slate-100 border-slate-200 text-slate-400 animate-pulse' : 'bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-700'}`} title="Identify My Location">
+                    {isDetectingLocation ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+                  </button>
+                </div>
+              </div>
+
+              <button 
+                onClick={handleAddCrop} 
+                disabled={!newCropName}
+                className={`w-full font-black py-7 rounded-[2.5rem] shadow-2xl active:scale-95 transition-all text-xl flex items-center justify-center space-x-4 border-b-[8px] ${!newCropName ? 'bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed' : 'bg-emerald-600 text-white border-emerald-800 hover:bg-emerald-500'}`}
+              >
+                <span>শস্য প্রোফাইলে যোগ করুন</span>
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
+              </button>
             </div>
           </div>
         </div>
-      )}
-
-      {activeSubTab === 'settings' && (
-        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
-          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 shadow-xl border border-slate-100 dark:border-slate-700">
-             <div className="mb-8"><h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight leading-none">অ্যাকাউন্ট সেটিংস</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Manage your identification and location</p></div>
-             <div className="flex flex-col md:flex-row gap-10 items-start mb-10">
-                <div className="relative group shrink-0"><div className="w-32 h-32 rounded-[2.5rem] border-4 border-emerald-500 overflow-hidden relative shadow-xl"><img src={user.photoURL || ''} className="w-full h-full object-cover" alt="Avatar" /><button onClick={handleAvatarClick} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-black uppercase tracking-widest">বদলান</button></div><input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" /></div>
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-                  <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">আপনার নাম</label><div className="relative"><input type="text" value={nameInput} onChange={(e) => { setNameInput(e.target.value); setHasChanges(true); }} className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-3xl py-4 px-6 pr-12 font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 transition-all shadow-inner" /><button onClick={() => toggleListening('name')} className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${isListeningField === 'name' ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-slate-300 hover:text-emerald-500'}`}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></button></div></div>
-                  <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">মোবাইল</label><input type="tel" value={mobileInput} onChange={(e) => { setMobileInput(e.target.value); setHasChanges(true); }} className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-3xl py-4 px-6 font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 transition-all shadow-inner" /></div>
-                </div>
-             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">জেলা</label><select value={districtInput} onChange={(e) => { setDistrictInput(e.target.value); setHasChanges(true); }} className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-3xl py-4 px-6 font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 transition-all shadow-inner">{DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
-                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">উপজেলা</label><div className="relative"><input type="text" value={upazilaInput} onChange={(e) => { setUpazilaInput(e.target.value); setHasChanges(true); }} className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-3xl py-4 px-6 pr-12 font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500 transition-all shadow-inner" /><button onClick={() => toggleListening('upazila')} className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${isListeningField === 'upazila' ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-slate-300 hover:text-emerald-500'}`}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></button></div></div>
-             </div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 shadow-xl border border-slate-100 dark:border-slate-700">
-             <div className="mb-8"><h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight leading-none">শস্য পছন্দ (Crop Interests)</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">এআই সুপারিশ কাস্টমাইজ করতে আপনার প্রিয় শস্যসমূহ বেছে নিন</p></div>
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">{CROP_CATEGORIES.map(cat => <button key={cat.id} onClick={() => togglePreferredCategory(cat.id)} className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-2 ${preferredCategories.includes(cat.id) ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 shadow-md scale-105' : 'border-slate-50 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-400'}`}><span className="text-2xl">{cat.icon}</span><span className="text-[9px] font-black uppercase leading-tight">{cat.label}</span></button>)}</div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 shadow-xl border border-slate-100 dark:border-slate-700 space-y-6">
-             <div className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-slate-100 dark:border-slate-700">
-                <div className="flex items-center space-x-4"><div className="text-2xl">{userSettings.theme === 'light' ? '☀️' : '🌙'}</div><div><h4 className="font-black text-slate-800 dark:text-white leading-none mb-1">ডার্ক মোড</h4></div></div>
-                <button onClick={toggleTheme} className={`w-14 h-8 rounded-full p-1 transition-all duration-300 ${userSettings.theme === 'dark' ? 'bg-emerald-500' : 'bg-slate-300'}`}><div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${userSettings.theme === 'dark' ? 'translate-x-6' : 'translate-x-0'}`}></div></button>
-             </div>
-             <div className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-slate-100 dark:border-slate-700">
-                <div className="flex items-center space-x-4"><div className="text-2xl">🔊</div><div><h4 className="font-black text-slate-800 dark:text-white leading-none mb-1">স্বয়ংক্রিয়ভাবে পড়ে শোনানো (Read Aloud)</h4></div></div>
-                <button onClick={onToggleSpeech} className={`w-14 h-8 rounded-full p-1 transition-all duration-300 ${speechEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}><div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${speechEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div></button>
-             </div>
-             {hasChanges && <button onClick={handleSaveAccount} className="mt-8 bg-slate-900 dark:bg-emerald-600 text-white px-10 py-5 rounded-[2rem] font-black text-sm shadow-2xl transition-all w-full md:w-auto">সকল পরিবর্তন সংরক্ষণ করুন</button>}
-          </div>
-        </div>
-      )}
-
-      {activeSubTab === 'saved' && (
-        <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-          <div className="flex items-center space-x-3 px-4 mb-4"><div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-xl shadow-inner">💾</div><h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">সেভ করা রিপোর্টসমূহ</h3></div>
-          {savedReports.length > 0 ? (
-            <div className="space-y-4">{savedReports.map((report) => (
-                <div key={report.id} className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 shadow-xl overflow-hidden group"><div className="p-8 cursor-pointer flex items-center justify-between" onClick={() => setExpandedReportId(expandedReportId === report.id ? null : report.id)}><div className="flex items-center space-x-5"><div className="w-14 h-14 bg-slate-50 dark:bg-slate-700 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">{report.icon || '📜'}</div><div><p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">{report.type}</p><h4 className="text-xl font-black text-slate-800 dark:text-white leading-tight">{report.title}</h4><p className="text-[10px] font-bold text-slate-400 mt-1 uppercase">{new Date(report.timestamp).toLocaleDateString('bn-BD')} • {new Date(report.timestamp).toLocaleTimeString('bn-BD')}</p></div></div><div className={`p-3 bg-slate-50 dark:bg-slate-700 rounded-full transition-all ${expandedReportId === report.id ? 'rotate-180 bg-emerald-50 text-emerald-600' : 'text-slate-300'}`}><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg></div></div>{expandedReportId === report.id && (<div className="p-8 pt-0 animate-fade-in"><div className="border-t border-slate-50 dark:border-slate-700 pt-8 mt-4"><div className="prose dark:prose-invert prose-slate max-w-none font-medium leading-relaxed text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{report.content}</div><div className="flex justify-end mt-8 pt-6 border-t border-slate-50 dark:border-slate-700 space-x-3"><button onClick={() => onUpdateUser({ savedReports: savedReports.filter(r => r.id !== report.id) })} className="px-6 py-3 bg-rose-50 text-rose-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all">মুছে ফেলুন</button><button onClick={() => { setIsShareOpen(true); }} className="px-6 py-3 bg-[#0A8A1F] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-green-700 transition-all">শেয়ার করুন</button></div></div></div>)}</div>
-              ))}</div>
-          ) : (
-            <div className="text-center py-32 bg-white dark:bg-slate-800 rounded-[3.5rem] border-4 border-dashed border-slate-100 dark:border-slate-700 flex flex-col items-center opacity-60"><div className="text-7xl mb-6 grayscale">📓</div><h3 className="text-xl font-black text-slate-400">এখনো কোনো রিপোর্ট সেভ করা হয়নি</h3><p className="text-sm font-medium text-slate-500 mt-2">বিশ্লেষণ শেষে 'সেভ করুন' বাটন টিপুন</p></div>
-          )}
-        </div>
-      )}
-
-      {showAddCropModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in font-sans"><div className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden flex flex-col relative border border-slate-100"><div className="bg-emerald-600 p-8 text-white flex justify-between items-center"><h3 className="text-2xl font-black tracking-tight">নতুন শস্য প্রোফাইল</h3><button onClick={() => setShowAddCropModal(false)} className="p-2 bg-white/10 rounded-xl hover:bg-white/20">✕</button></div><div className="p-8 space-y-6"><select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold text-slate-700 outline-none focus:border-emerald-500 transition-all shadow-inner">{CROP_CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select><select value={newCropName} onChange={(e) => setNewCropName(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold text-slate-700 outline-none focus:border-emerald-500 transition-all shadow-inner"><option value="">শস্য নির্বাচন করুন</option>{(CROPS_BY_CATEGORY[selectedCategory] || []).map(c => <option key={c} value={c}>{c}</option>)}</select><div className="relative"><input type="text" value={newCropVariety} onChange={(e) => setNewCropVariety(e.target.value)} placeholder="জাত" className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 pr-12 font-bold text-slate-700 outline-none focus:border-emerald-500 transition-all shadow-inner" /><button onClick={() => toggleListening('cropVariety')} className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${isListeningField === 'cropVariety' ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-slate-300 hover:text-emerald-500'}`}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></button></div><div className="flex flex-col space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">রোপণ/বপনের তারিখ</label><input type="date" value={newCropDate} onChange={(e) => setNewCropDate(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold text-slate-700 outline-none focus:border-emerald-500 transition-all shadow-inner" /></div><div className="flex gap-2"><div className="flex-1 relative"><input type="text" value={newCropLocation} onChange={(e) => setNewCropLocation(e.target.value)} placeholder="অবস্থান (যেমন: সাভার)" className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 pr-12 font-bold text-slate-700 outline-none focus:border-emerald-500 transition-all shadow-inner" /><button onClick={() => toggleListening('cropLocation')} className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${isListeningField === 'cropLocation' ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-slate-300 hover:text-emerald-500'}`}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></button></div><button onClick={detectCropLocation} disabled={isDetectingLocation} className="bg-emerald-100 text-emerald-600 p-4 rounded-2xl border-2 border-emerald-200 transition-all active:scale-95">{isDetectingLocation ? '...' : '📍'}</button></div><button onClick={handleAddCrop} className="w-full bg-emerald-600 text-white font-black py-5 rounded-3xl shadow-xl active:scale-95 transition-all text-lg">শস্য প্রোফাইলে যোগ করুন</button></div></div></div>
       )}
     </div>
   );
 };
+
+/* Helper UI Components */
+
+const NavPill = ({ id, label, icon, active, onClick }: any) => (
+  <button 
+    onClick={() => onClick(id)}
+    className={`flex-1 min-w-[120px] py-4 rounded-[2rem] text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center space-x-3 ${
+      active === id 
+      ? 'bg-emerald-600 text-white shadow-2xl scale-105' 
+      : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+    }`}
+  >
+     <span className="text-xl">{icon}</span>
+     <span>{label}</span>
+  </button>
+);
+
+const SkillBar = ({ label, val, color, icon }: any) => (
+  <div className="space-y-3 group">
+     <div className="flex justify-between items-center px-1">
+        <div className="flex items-center space-x-3">
+           <span className="text-2xl drop-shadow-sm group-hover:scale-125 transition-transform">{icon}</span>
+           <span className="text-xs font-black uppercase tracking-wider text-slate-300">{label}</span>
+        </div>
+        <span className={`text-sm font-black tracking-tighter ${color === 'emerald' ? 'text-emerald-400' : color === 'rose' ? 'text-rose-400' : 'text-blue-400'}`}>{val}%</span>
+     </div>
+     <div className="h-4 w-full bg-white/10 rounded-full overflow-hidden p-1 shadow-inner">
+        <div 
+          className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_currentColor] ${
+            color === 'emerald' ? 'bg-emerald-500 text-emerald-500' : 
+            color === 'rose' ? 'bg-rose-500 text-rose-500' : 
+            'bg-blue-500 text-blue-500'
+          }`} 
+          style={{ width: `${val}%` }}
+        ></div>
+     </div>
+  </div>
+);
+
+const MapQuickAction = ({ label, icon, onClick, active }: any) => (
+  <button 
+    onClick={onClick}
+    className={`px-6 py-4 rounded-3xl shadow-xl border-2 transition-all active:scale-95 flex items-center space-x-3 ${active ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}
+  >
+     <span className="text-2xl">{icon}</span>
+     <span className={`font-black text-[11px] uppercase tracking-widest ${active ? 'text-white' : 'text-slate-700 dark:text-white'}`}>{label}</span>
+  </button>
+);
 
 export default UserProfile;

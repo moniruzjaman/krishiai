@@ -2,8 +2,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getAgriMetaExplanation, generateSpeech, decodeBase64, decodeAudioData } from '../services/geminiService';
 
-/* Fix: Added FAQProps interface */
+/* Fix: Added onBack to FAQProps */
 interface FAQProps {
+  onBack?: () => void;
   onShowFeedback?: () => void;
 }
 
@@ -74,8 +75,7 @@ const FAQ_DATA = [
   }
 ];
 
-/* Fix: Component now receives onShowFeedback prop */
-const FAQ: React.FC<FAQProps> = ({ onShowFeedback }) => {
+const FAQ: React.FC<FAQProps> = ({ onShowFeedback, onBack }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const [activeTab, setActiveTab] = useState('all');
   const [metaQuery, setMetaQuery] = useState('');
@@ -150,7 +150,6 @@ const FAQ: React.FC<FAQProps> = ({ onShowFeedback }) => {
       if (res) {
         playTTS(res);
       }
-      /* Fix: Trigger feedback if provided after AI response */
       if (onShowFeedback) onShowFeedback();
     } catch (e) {
       setMetaAnswer("দুঃখিত, তথ্য সংগ্রহে সমস্যা হয়েছে।");
@@ -163,7 +162,8 @@ const FAQ: React.FC<FAQProps> = ({ onShowFeedback }) => {
     <div className="max-w-4xl mx-auto p-6 pb-32 animate-fade-in font-sans">
       {/* Header */}
       <div className="flex items-center space-x-4 mb-10">
-        <button onClick={() => { window.history.back(); stopTTS(); }} className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:bg-slate-50 transition-all active:scale-90 text-slate-400">
+        {/* Fix: Use onBack prop if available */}
+        <button onClick={() => { onBack ? onBack() : window.history.back(); stopTTS(); }} className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:bg-slate-50 transition-all active:scale-90 text-slate-400">
           <svg className="h-6 w-6 fill-none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </button>
         <div>

@@ -336,7 +336,7 @@ export const detectCurrentAEZDetails = (force: boolean = false): Promise<AEZInfo
       (error) => {
         reject(error);
       },
-      { timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   });
 };

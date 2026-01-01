@@ -1,4 +1,7 @@
 
+export type Language = 'bn' | 'en';
+export type UserRole = 'farmer_entrepreneur' | 'policy_maker' | 'extension_provider' | 'input_seller' | 'others';
+
 export enum View {
   HOME = 'HOME',
   TOOLS = 'TOOLS',
@@ -25,15 +28,38 @@ export enum View {
   TASK_SCHEDULER = 'TASK_SCHEDULER',
   FAQ = 'FAQ',
   CROP_CALENDAR = 'CROP_CALENDAR',
-  PODCAST = 'PODCAST'
+  PODCAST = 'PODCAST',
+  CABI_TRAINING = 'CABI_TRAINING',
+  MAPS = 'MAPS'
 }
 
-export interface UserCrop {
+export interface GroundingChunk {
+  web?: {
+    uri: string;
+    title: string;
+  };
+  maps?: {
+    uri: string;
+    title: string;
+  };
+}
+
+export interface AnalysisResult {
+  diagnosis: string;
+  category: 'Pest' | 'Disease' | 'Deficiency' | 'Other';
+  confidence: number;
+  advisory: string;
+  fullText: string;
+  officialSource?: string;
+  groundingChunks?: GroundingChunk[];
+}
+
+export interface FlashCard {
   id: string;
-  name: string;
-  variety: string;
-  sowingDate: string;
-  location: string;
+  front: string;
+  back: string;
+  hint?: string;
+  category?: string;
 }
 
 export interface AgriTask {
@@ -42,24 +68,42 @@ export interface AgriTask {
   dueDate: string;
   dueTime: string;
   completed: boolean;
-  crop?: string;
   category: 'planting' | 'fertilizer' | 'irrigation' | 'pesticide' | 'harvest' | 'other';
+  crop?: string;
   notes?: string;
 }
 
+export interface UserCrop {
+  id: string;
+  name: string;
+  variety: string;
+  sowingDate: string;
+  location: string;
+  lat?: number;
+  lng?: number;
+}
+
 export interface UserProgress {
-  xp: number;
-  level: number;
   rank: string;
+  level: number;
+  xp: number;
   streak: number;
-  lastActive: number;
-  badges: string[];
-  masteredTopics: string[];
   skills: {
     soil: number;
     protection: number;
     technology: number;
   };
+}
+
+export interface SavedReport {
+  id: string;
+  timestamp: number;
+  type: string;
+  title: string;
+  content: string;
+  audioBase64?: string;
+  imageUrl?: string;
+  icon?: string;
 }
 
 export interface UserSettings {
@@ -71,86 +115,33 @@ export interface UserSettings {
   };
 }
 
-export interface SavedReport {
-  id: string;
-  type: string;
-  title: string;
-  content: string;
-  timestamp: number;
-  icon?: string;
-}
-
 export interface User {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
+  uid?: string;
+  displayName?: string;
+  photoURL?: string;
   mobile?: string;
+  role: UserRole;
   farmLocation?: {
     district: string;
     upazila: string;
+    aez?: string;
   };
-  preferredCategories?: string[];
-  settings?: UserSettings;
   progress: UserProgress;
   myCrops: UserCrop[];
   savedReports: SavedReport[];
-}
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'model';
-  text: string;
-  isError?: boolean;
-  groundingChunks?: GroundingChunk[];
-}
-
-export interface GroundingChunk {
-  web?: {
-    uri?: string;
-    title?: string;
-  };
-}
-
-export interface AnalysisResult {
-  diagnosis: string;
-  advisory: string;
-  fullText: string;
-  groundingChunks?: GroundingChunk[];
-}
-
-export interface SavedAnalysis {
-  id: string;
-  timestamp: number;
-  image: string;
-  mimeType: string;
-  result: AnalysisResult;
-  cropFamily?: string;
-  focusArea?: string;
-}
-
-export interface AppConfig {
-  apiKey: string;
-}
-
-export interface FlashCard {
-  id: string;
-  front: string;
-  back: string;
-  hint?: string;
-  category: string;
+  preferredCategories: string[];
+  settings?: UserSettings;
 }
 
 export interface ForecastDay {
   date: string;
-  condition: string;
   maxTemp: number;
   minTemp: number;
-  rainProbability: number;
+  condition: string;
 }
 
 export interface WeatherData {
-  city: string;
+  city?: string;
   upazila: string;
   district: string;
   temp: number;
@@ -159,34 +150,31 @@ export interface WeatherData {
   humidity: number;
   windSpeed: number;
   rainProbability: number;
-  evapotranspiration: number;
-  soilTemperature: number;
-  solarRadiation: number;
-  gdd: number;
-  forecast: ForecastDay[];
-}
-
-export interface CropDisease {
-  name: string;
-  symptoms: string;
-  bioControl: string;
-  chemControl: string;
-  severity: string;
-}
-
-export interface CropPest {
-  name: string;
-  damageSymptoms: string;
-  bioControl: string;
-  chemControl: string;
-  severity: string;
+  evapotranspiration?: number;
+  soilTemperature?: number;
+  solarRadiation?: number;
+  gdd?: number;
+  diseaseRisk?: string;
+  forecast?: ForecastDay[];
 }
 
 export interface CropDiseaseReport {
   cropName: string;
   summary: string;
-  diseases: CropDisease[];
-  pests: CropPest[];
+  diseases: Array<{
+    name: string;
+    symptoms: string;
+    bioControl: string;
+    chemControl: string;
+    severity: string;
+  }>;
+  pests: Array<{
+    name: string;
+    damageSymptoms: string;
+    bioControl: string;
+    chemControl: string;
+    severity: string;
+  }>;
 }
 
 export interface AgriQuizQuestion {
@@ -194,4 +182,12 @@ export interface AgriQuizQuestion {
   options: string[];
   correctAnswer: number;
   explanation: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'model';
+  text: string;
+  isError?: boolean;
+  groundingChunks?: GroundingChunk[];
 }

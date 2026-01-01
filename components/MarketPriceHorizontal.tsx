@@ -1,16 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { View } from '../types';
+import { View, Language } from '../types';
 import { getTrendingMarketPrices } from '../services/geminiService';
 
 interface MarketPriceHorizontalProps {
   onNavigate: (view: View) => void;
+  // Add lang to fix assignability error in App.tsx
+  lang?: Language;
 }
 
-export const MarketPriceHorizontal: React.FC<MarketPriceHorizontalProps> = ({ onNavigate }) => {
+export const MarketPriceHorizontal: React.FC<MarketPriceHorizontalProps> = ({ onNavigate, lang = 'bn' }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [prices, setPrices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(false);
   
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -18,21 +21,28 @@ export const MarketPriceHorizontal: React.FC<MarketPriceHorizontalProps> = ({ on
   }, []);
 
   useEffect(() => {
-    const fetchPrices = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getTrendingMarketPrices();
-        if (data && data.length > 0) {
-          setPrices(data);
-        }
-      } catch (e) {
-        console.error("Market fetch error", e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchPrices();
-  }, []);
+  }, [lang]);
+
+  const fetchPrices = async () => {
+    setIsLoading(true);
+    setError(false);
+    try {
+      // Pass lang to getTrendingMarketPrices to ensure localized results
+      const data = await getTrendingMarketPrices(lang);
+      if (data && data.length > 0) {
+        setPrices(data);
+      } else {
+        // Fallback for empty or malformed data
+        setPrices([]);
+      }
+    } catch (e) {
+      console.error("Market fetch error", e);
+      setError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const toBanglaNumber = (val: any) => {
     if (val === null || val === undefined) return '';
@@ -85,6 +95,11 @@ export const MarketPriceHorizontal: React.FC<MarketPriceHorizontalProps> = ({ on
             <div className="h-24 w-40 bg-slate-100 rounded-[2rem]"></div>
             <div className="h-24 w-40 bg-slate-100 rounded-[2rem]"></div>
           </div>
+        ) : error ? (
+           <div className="py-10 text-center flex flex-col items-center">
+              <p className="text-sm font-bold text-slate-400 uppercase mb-4">তথ্য সংগ্রহে সমস্যা হচ্ছে</p>
+              <button onClick={fetchPrices} className="text-[10px] font-black text-blue-600 border-b-2 border-blue-600 pb-0.5">পুনরায় চেষ্টা করুন</button>
+           </div>
         ) : (
           <div className="flex space-x-4 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
             {prices.map((item, idx) => (

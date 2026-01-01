@@ -7,25 +7,27 @@ import ShareDialog from './ShareDialog';
 interface AgriPodcastProps {
   onAction?: (xp: number) => void;
   onShowFeedback?: () => void;
+  // Fix: Added missing onBack prop
+  onBack?: () => void;
 }
 
 const podcastThemes = [
   { id: 'news', title: 'আজকের কৃষি সংবাদ', icon: '📰', prompt: 'বাংলাদেশের আজকের প্রধান কৃষি খবর এবং বাজার দর।' },
-  { id: 'rice', title: 'ধান চাষের আধুনিক টিপস', icon: '🌾', prompt: 'উন্নত ফলনের জন্য ধান চাষের বৈজ্ঞানিক ও আধুনিক পদ্ধতি।' },
+  { id: 'rice', title: 'ধান চাষের লাভজনক টিপস', icon: '🌾', prompt: 'উন্নত ফলন ও মুনাফার জন্য ধান চাষের বৈজ্ঞানিক ও লাভজনক পদ্ধতি।' },
   { id: 'soil', title: 'মাটির স্বাস্থ্য রক্ষা', icon: '🏺', prompt: 'দীর্ঘমেয়াদী উর্বরতা ধরে রাখতে মাটির জৈব ব্যবস্থাপনা।' },
   { id: 'tech', title: 'স্মার্ট কৃষি প্রযুক্তি', icon: '🛰️', prompt: 'চাষাবাদে এআই এবং ড্রোন প্রযুক্তির ব্যবহার।' },
   { id: 'pest', title: 'জৈবিক বালাই দমন', icon: '🐞', prompt: 'পরিবেশবান্ধব উপায়ে পোকা ও রোগ নিয়ন্ত্রণ।' }
 ];
 
 const thinkingMessages = [
-  "গবেষণা তথ্য সংগ্রহ করা হচ্ছে...",
+  "গবেষণা তথ্য বিশ্লেষণ করা হচ্ছে...",
   "পডকাস্ট স্ক্রিপ্ট তৈরি হচ্ছে...",
   "বিশেষজ্ঞ মতামত সমন্বয় করা হচ্ছে...",
   "অডিও জেনারেট করার জন্য প্রস্তুত হচ্ছে...",
   "স্টুডিও রেন্ডারিং শেষ পর্যায়ে..."
 ];
 
-const AgriPodcast: React.FC<AgriPodcastProps> = ({ onAction, onShowFeedback }) => {
+const AgriPodcast: React.FC<AgriPodcastProps> = ({ onAction, onShowFeedback, onBack }) => {
   const [activeTheme, setActiveTheme] = useState<string | null>(null);
   const [customTopic, setCustomTopic] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -144,7 +146,8 @@ const AgriPodcast: React.FC<AgriPodcastProps> = ({ onAction, onShowFeedback }) =
       {isShareOpen && <ShareDialog isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} title="কৃষি পডকাস্ট সারাংশ" content={podcastData?.text || ""} />}
       
       <div className="flex items-center space-x-4 mb-8">
-        <button onClick={() => { window.history.back(); stopPlayback(); }} className="p-3 bg-white rounded-2xl shadow-sm border hover:bg-slate-50 transition-all active:scale-90 text-slate-400">
+        {/* Fix: Use onBack prop if available */}
+        <button onClick={() => { onBack ? onBack() : window.history.back(); stopPlayback(); }} className="p-3 bg-white rounded-2xl shadow-sm border hover:bg-slate-50 transition-all active:scale-90 text-slate-400">
           <svg className="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </button>
         <div>

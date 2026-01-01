@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
-import { View, User, SavedReport } from './types';
 
-// Component Imports
+import React, { useState, useEffect, useContext, createContext } from 'react';
+import { View, User, SavedReport, Language, UserRole } from './types';
 import { Hero } from './components/Hero';
-import Analyzer from './components/Analyzer';
+import ToolsHub from './components/ToolsHub';
 import ChatBot from './components/ChatBot';
 import SearchTool from './components/SearchTool';
+import Analyzer from './components/Analyzer';
 import Weather from './components/Weather';
 import NutrientCalculator from './components/NutrientCalculator';
 import BiocontrolGuide from './components/BiocontrolGuide';
@@ -15,394 +15,471 @@ import PesticideExpert from './components/PesticideExpert';
 import SoilExpert from './components/SoilExpert';
 import YieldCalculator from './components/YieldCalculator';
 import AIYieldPredictor from './components/AIYieldPredictor';
-import CropDiseaseLibrary from './components/CropDiseaseLibrary';
+import { CropDiseaseLibrary } from './components/CropDiseaseLibrary';
 import QRGenerator from './components/QRGenerator';
 import FieldMonitoring from './components/FieldMonitoring';
 import LeafColorChart from './components/LeafColorChart';
 import LearningCenter from './components/LearningCenter';
-import AgriPodcast from './components/AgriPodcast';
 import UserProfile from './components/UserProfile';
 import About from './components/About';
 import FlashcardView from './components/FlashcardView';
 import TaskScheduler from './components/TaskScheduler';
 import FAQ from './components/FAQ';
 import CropCalendar from './components/CropCalendar';
-import ToolsHub from './components/ToolsHub';
+import AgriPodcast from './components/AgriPodcast';
+import CABIDiagnosisTraining from './components/CABIDiagnosisTraining';
+import FieldMap from './components/FieldMap';
 import { WeatherHorizontal } from './components/WeatherHorizontal';
 import { MarketPriceHorizontal } from './components/MarketPriceHorizontal';
-import { Logo } from './components/Logo';
-import ShareDialog from './components/ShareDialog';
-import GuidedTour, { TourStep } from './components/GuidedTour';
-import FeedbackModal from './components/FeedbackModal';
-import { NewsTicker, FeaturedCourses, MissionSection, ContactFooter, StatsSection } from './components/HomeSections';
-import { GoogleAdBanner } from './components/GoogleAdBanner';
 import { FeatureHighlights } from './components/FeatureHighlights';
-import { getHomeQuickTip, generateSpeech, decodeBase64, decodeAudioData } from './services/geminiService';
+import { NewsTicker, StatsSection, FeaturedCourses, MissionSection, ContactFooter } from './components/HomeSections';
+import { generateSpeech, decodeBase64, decodeAudioData } from './services/geminiService';
+import { Logo } from './components/Logo';
+import { FarmerAvatar } from './components/FarmerAvatar';
+import ShareDialog from './components/ShareDialog';
 
-// Speech Context for Seamless Read Aloud
 interface SpeechContextType {
-  isSpeaking: boolean;
-  playSpeech: (text: string) => Promise<void>;
+  playSpeech: (text: string, audioBase64?: string) => Promise<void>;
   stopSpeech: () => void;
+  isSpeaking: boolean;
   speechEnabled: boolean;
-  toggleSpeechEnabled: () => void;
+  setSpeechEnabled: (enabled: boolean) => void;
 }
 
-const SpeechContext = createContext<SpeechContextType | undefined>(undefined);
+const SpeechContext = createContext<SpeechContextType | null>(null);
 
 export const useSpeech = () => {
   const context = useContext(SpeechContext);
-  if (!context) throw new Error('useSpeech must be used within a SpeechProvider');
+  if (!context) throw new Error("useSpeech must be used within a SpeechProvider");
   return context;
 };
 
-const initialUser: User = {
-  uid: 'guest_user',
-  email: null,
-  displayName: 'কৃষক বন্ধু',
-  photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AgriTech',
-  progress: {
-    xp: 0,
-    level: 1,
-    rank: 'নবিশ কৃষক',
-    streak: 1,
-    lastActive: Date.now(),
-    badges: [],
-    masteredTopics: [],
-    skills: { soil: 0, protection: 0, technology: 0 }
-  },
-  myCrops: [],
-  savedReports: [],
-  settings: {
-    theme: 'light',
-    notifications: { weather: true, market: true, cropHealth: true }
-  }
-};
-
-const MAIN_TOUR_STEPS: TourStep[] = [
-  {
-    title: "স্বাগতম Krishi AI-তে!",
-    content: "বাংলাদেশের কৃষকদের জন্য তৈরি এই আধুনিক এআই প্ল্যাটফর্মে আপনাকে স্বাগতম। চলুন মূল ফিচারগুলো দেখে নিই।",
-    position: 'center'
-  },
-  {
-    targetId: "hero-scanner-btn",
-    title: "স্মার্ট এআই স্ক্যানার",
-    content: "গাছের পাতার একটি ছবি তুলেই কয়েক সেকেন্ডে রোগের নাম এবং সরকারি (BARC) অনুমোদিত সমাধান জানুন।",
-    position: 'bottom'
-  },
-  {
-    targetId: "weather-horizontal-widget",
-    title: "লাইভ কৃষি-আবহাওয়া",
-    content: "আপনার এলাকার জন্য সঠিক আবহাওয়া এবং বালাইনাশক স্প্রে করার আদর্শ সময় এখান থেকে দেখে নিন।",
-    position: 'bottom'
-  }
-];
-
 const App: React.FC = () => {
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+  const [keyErrorType, setKeyErrorType] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<View>(View.HOME);
-  const [user, setUser] = useState<User>(initialUser);
-  const [showTour, setShowTour] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [lang, setLang] = useState<Language>('bn');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const [dailyTip, setDailyTip] = useState<string>("");
-  const [isTipLoading, setIsTipLoading] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  const [user, setUser] = useState<User>({
+    displayName: 'কৃষক বন্ধু',
+    role: 'farmer_entrepreneur',
+    progress: {
+      rank: 'নবিশ কৃষক',
+      level: 1,
+      xp: 120,
+      streak: 3,
+      skills: { soil: 40, protection: 30, technology: 50 }
+    },
+    myCrops: [],
+    savedReports: [],
+    preferredCategories: ['cereals', 'vegetables'],
+    settings: {
+      theme: 'light',
+      notifications: { weather: true, market: true, cropHealth: true }
+    }
+  });
+
   const [speechEnabled, setSpeechEnabled] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
+  const [currentSource, setCurrentSource] = useState<AudioBufferSourceNode | null>(null);
 
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  useEffect(() => {
+    const checkApiKey = async () => {
+      // @ts-ignore
+      const selected = await window.aistudio.hasSelectedApiKey();
+      setHasApiKey(selected);
+    };
+    checkApiKey();
 
-  const stopSpeech = useCallback(() => {
-    if (currentSourceRef.current) {
-      currentSourceRef.current.stop();
-      currentSourceRef.current = null;
+    const handleKeyInvalid = (e: any) => {
+      setKeyErrorType(e.detail.message);
+      setHasApiKey(false); // Trigger re-selection gate
+    };
+
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    
+    window.addEventListener('agritech_api_key_invalid', handleKeyInvalid);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    
+    return () => {
+      window.removeEventListener('agritech_api_key_invalid', handleKeyInvalid);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleSelectKey = async () => {
+    try {
+      // @ts-ignore
+      await window.aistudio.openSelectKey();
+      // Assume success as per guidelines to avoid race condition
+      setHasApiKey(true);
+      setKeyErrorType(null);
+    } catch (e) {
+      console.error("Key selection failed", e);
+    }
+  };
+
+  const stopSpeech = () => {
+    if (currentSource) {
+      currentSource.stop();
+      setCurrentSource(null);
     }
     setIsSpeaking(false);
-  }, []);
+  };
 
-  const playSpeech = useCallback(async (text: string) => {
-    if (!text) return;
+  const playSpeech = async (text: string, audioBase64?: string) => {
+    if (!speechEnabled) return;
+    stopSpeech();
+    
     try {
-      stopSpeech();
       setIsSpeaking(true);
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-      }
-      const ctx = audioContextRef.current;
+      const ctx = audioCtx || new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      if (!audioCtx) setAudioCtx(ctx);
       if (ctx.state === 'suspended') await ctx.resume();
-      
-      const cleanText = text.replace(/[*#_~]/g, '');
-      const base64Audio = await generateSpeech(cleanText);
-      const audioData = decodeBase64(base64Audio);
-      const audioBuffer = await decodeAudioData(audioData, ctx, 24000, 1);
-      
+
+      let base64 = audioBase64;
+      if (!base64) {
+        base64 = await generateSpeech(text.replace(/[*#_~]/g, ''));
+      }
+
+      const buffer = await decodeAudioData(decodeBase64(base64), ctx, 24000, 1);
       const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
+      source.buffer = buffer;
       source.connect(ctx.destination);
-      source.onended = () => setIsSpeaking(false);
-      currentSourceRef.current = source;
+      source.onended = () => setIsPlayingState(false);
       source.start(0);
-    } catch (error) {
-      console.debug("Speech Playback Error", error);
+      setCurrentSource(source);
+    } catch (e) {
+      console.error("Speech Error:", e);
       setIsSpeaking(false);
     }
-  }, [stopSpeech]);
+  };
 
-  const toggleSpeechEnabled = () => setSpeechEnabled(prev => !prev);
+  const setIsPlayingState = (val: boolean) => {
+    setIsSpeaking(val);
+    if (!val) setCurrentSource(null);
+  };
 
-  useEffect(() => {
-    const saved = localStorage.getItem('agritech_user_data');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setUser(parsed);
-        if (parsed.settings?.speechEnabled !== undefined) {
-          setSpeechEnabled(parsed.settings.speechEnabled);
-        }
-      } catch (e) {
-        console.error("Failed to load user data", e);
+  const handleNavigate = (view: View) => {
+    stopSpeech();
+    setCurrentView(view);
+    setIsDrawerOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAction = (xp: number) => {
+    setUser(prev => ({
+      ...prev,
+      progress: {
+        ...prev.progress,
+        xp: prev.progress.xp + xp,
+        level: Math.floor((prev.progress.xp + xp) / 500) + 1
       }
-    }
-
-    const tourCompleted = localStorage.getItem('agritech_tour_main');
-    if (!tourCompleted) setShowTour(true);
-
-    const handleBeforeInstall = (e: any) => { e.preventDefault(); setInstallPrompt(e); };
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    const handleNavigate = (e: any) => setCurrentView(e.detail);
-    window.addEventListener('agritech_navigate', handleNavigate);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-      window.removeEventListener('agritech_navigate', handleNavigate);
-    };
-  }, []);
-
-  useEffect(() => {
-    const userToSave = { ...user, settings: { ...user.settings, speechEnabled } };
-    localStorage.setItem('agritech_user_data', JSON.stringify(userToSave));
-    
-    const fetchQuickTip = async () => {
-      if (user.myCrops.length > 0 && currentView === View.HOME) {
-        setIsTipLoading(true);
-        try {
-          const tip = await getHomeQuickTip(user.myCrops);
-          setDailyTip(tip);
-          // Only read aloud home tip automatically if speech is enabled
-          if (speechEnabled) playSpeech(tip);
-        } catch (e) {
-          setDailyTip(`আপনার ${user.myCrops[0]?.name || 'শস্যের'} যত্ন নিন। নিয়মিত পর্যবেক্ষণ রোগবালাই দমনে সহায়ক।`);
-        } finally {
-          setIsTipLoading(false);
-        }
-      }
-    };
-    fetchQuickTip();
-  }, [user.myCrops.length, currentView, speechEnabled]);
-
-  const handleAction = (xp: number = 10) => {
-    setUser(prev => {
-      const newXp = prev.progress.xp + xp;
-      let rank = prev.progress.rank;
-      if (newXp > 10000) rank = 'মাস্টার এগ্রোনোমিস্ট';
-      else if (newXp > 2000) rank = 'অভিজ্ঞ কৃষক';
-      else if (newXp > 500) rank = 'উন্নয়নশীল কৃষক';
-      return { ...prev, progress: { ...prev.progress, xp: newXp, level: Math.floor(newXp / 100) + 1, rank } };
-    });
+    }));
   };
 
   const handleSaveReport = (report: Omit<SavedReport, 'id' | 'timestamp'>) => {
-    const newReport: SavedReport = { ...report, id: Date.now().toString(), timestamp: Date.now() };
-    setUser(prev => ({ ...prev, savedReports: [newReport, ...prev.savedReports] }));
-    handleAction(20);
+    const newReport: SavedReport = {
+      ...report,
+      id: Math.random().toString(36).substr(2, 9),
+      timestamp: Date.now()
+    };
+    setUser(prev => ({
+      ...prev,
+      savedReports: [newReport, ...prev.savedReports]
+    }));
   };
 
-  const showFeedback = () => setTimeout(() => setIsFeedbackOpen(true), 500);
-  const updateUser = (updates: Partial<User>) => setUser(prev => ({ ...prev, ...updates }));
-
-  const handleInstallApp = async () => {
-    if (installPrompt) {
-      installPrompt.prompt();
-      const { outcome } = await installPrompt.userChoice;
-      if (outcome === 'accepted') { setInstallPrompt(null); setIsShareOpen(false); }
+  useEffect(() => {
+    const onGlobalNav = (e: any) => handleNavigate(e.detail as View);
+    const onSaveReportEvent = (e: any) => handleSaveReport(e.detail);
+    window.addEventListener('agritech_navigate', onGlobalNav);
+    window.addEventListener('agritech_save_report', onSaveReportEvent);
+    return () => {
+      window.removeEventListener('agritech_navigate', onGlobalNav);
+      window.removeEventListener('agritech_save_report', onSaveReportEvent);
     }
-  };
+  }, []);
 
-  const handleBack = () => {
-    stopSpeech();
-    const toolsViews = [
-      View.CHAT, View.SEARCH, View.ANALYZER, View.WEATHER, View.NUTRIENT_CALC,
-      View.BIOCONTROL, View.SOIL_GUIDE, View.DEFENSE_GUIDE, View.PEST_EXPERT,
-      View.SOIL_EXPERT, View.YIELD_CALCULATOR, View.AI_YIELD_PREDICTION,
-      View.CROP_DISEASE_LIBRARY, View.QR_GENERATOR, View.MONITORING,
-      View.LEAF_COLOR_CHART, View.LEARNING_CENTER, View.PODCAST, View.FAQ,
-      View.CROP_CALENDAR, View.TASK_SCHEDULER
-    ];
-    if (currentView === View.TOOLS) setCurrentView(View.HOME);
-    else if (toolsViews.includes(currentView)) setCurrentView(View.TOOLS);
-    else setCurrentView(View.HOME);
-  };
+  if (hasApiKey === false) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white font-sans">
+        <div className="max-w-md w-full space-y-10 text-center animate-fade-in">
+           <div className="relative inline-block">
+             <div className="absolute inset-0 bg-emerald-500 blur-3xl opacity-20 animate-pulse"></div>
+             <Logo size="xl" showText={false} className="relative z-10 mx-auto" />
+           </div>
+           <div className="space-y-4">
+             <h1 className="text-4xl font-black tracking-tighter">Krishi <span className="text-emerald-600">AI</span></h1>
+             <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10 text-slate-300 leading-relaxed">
+                {keyErrorType === "REFERRER_BLOCKED" ? (
+                  <div className="space-y-3">
+                    <p className="text-rose-400 font-black uppercase text-xs tracking-widest">🚨 HTTP Referrer Block Detected</p>
+                    <p className="text-sm font-bold">
+                      আপনার বর্তমান API Key-টি "HTTP Referrer Restricted"। এই পরিবেশে অ্যাপটি ব্যবহারের জন্য আপনার এমন একটি পেইড কী প্রয়োজন যাতে কোনো ডোমেইন রেস্ট্রিকশন নেই। 
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm font-bold">
+                    অ্যাপটি ব্যবহারের জন্য আপনার নিজের <b>Paid Google Cloud API Key</b> প্রয়োজন। (৪-৩ এরর বা রেফারার ব্লক এড়াতে আপনার কি নির্বাচন করুন)।
+                  </p>
+                )}
+             </div>
+             <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10 text-xs text-slate-500">
+               বিলিং সংক্রান্ত তথ্যের জন্য <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="text-emerald-400 underline">এখানে ক্লিক করুন</a>।
+             </div>
+           </div>
+           <button 
+             onClick={handleSelectKey}
+             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[2rem] text-xl shadow-[0_20px_50px_rgba(16,185,129,0.3)] transition-all active:scale-95"
+           >
+             API কী নির্বাচন করুন
+           </button>
+           <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Digital Agri-Tech Ecosystem v2.5</p>
+        </div>
+      </div>
+    );
+  }
 
   const renderView = () => {
     switch (currentView) {
       case View.HOME:
         return (
-          <div className="space-y-0 overflow-x-hidden bg-slate-50 min-h-screen">
-            <Hero onNavigate={setCurrentView} />
-            <NewsTicker />
-            <div className="max-w-7xl mx-auto px-4 -mt-16 relative z-40">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard label="আপনার XP" val={user.progress.xp} icon="🏆" color="text-yellow-600" />
-                <StatCard label="লেভেল" val={user.progress.level} icon="⭐" color="text-blue-600" />
-                <StatCard label="শস্য" val={user.myCrops.length} icon="🌾" color="text-emerald-600" />
-                <StatCard label="রিপোর্ট" val={user.savedReports.length} icon="📜" color="text-indigo-600" />
-              </div>
+          <div className="animate-fade-in space-y-0">
+            <Hero onNavigate={handleNavigate} lang={lang} />
+            <div className="max-w-7xl mx-auto px-4 -mt-16 relative z-50 space-y-8 pb-12">
+               <WeatherHorizontal lang={lang} />
+               <MarketPriceHorizontal onNavigate={handleNavigate} lang={lang} />
+               <NewsTicker lang={lang} />
             </div>
-            <WeatherHorizontal />
-            <div className="max-w-7xl mx-auto px-4 py-12">
-               <MarketPriceHorizontal onNavigate={setCurrentView} />
-            </div>
-            {user.myCrops.length > 0 && (
-              <div className="max-w-7xl mx-auto px-4 mb-12 animate-fade-in">
-                <div id="personal-advisory" className="bg-white rounded-[3rem] p-8 md:p-12 shadow-2xl border-l-[16px] border-[#0A8A1F] relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full -mr-32 -mt-32 transition-transform duration-700 group-hover:scale-110"></div>
-                  <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-8">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-16 h-16 bg-emerald-100 rounded-3xl flex items-center justify-center text-4xl shadow-inner border border-emerald-50">💡</div>
-                        <div>
-                          <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none">আপনার জন্য বিশেষ পরামর্শ</h3>
-                          <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mt-2">অ্যাগ্রোনোমিস্ট গাইডেন্স সক্রিয়</p>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => playSpeech(dailyTip)}
-                        className={`p-5 rounded-full shadow-2xl transition-all active:scale-90 ${isSpeaking ? 'bg-rose-500 animate-pulse' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
-                      >
-                        {isSpeaking ? (
-                          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 9v6m4-6v6" /></svg>
-                        ) : (
-                          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                        )}
-                      </button>
-                    </div>
-                    {isTipLoading ? (
-                      <div className="flex items-center space-x-3 py-10">
-                         <div className="w-6 h-6 border-4 border-[#0A8A1F] border-t-transparent rounded-full animate-spin"></div>
-                         <p className="text-slate-400 font-black uppercase tracking-widest text-xs">এআই পরামর্শ বিশ্লেষণ করছে...</p>
-                      </div>
-                    ) : (
-                      <div className="relative mb-10">
-                        <p className="text-xl md:text-2xl font-medium leading-relaxed text-slate-700 italic border-l-4 border-emerald-500 pl-6 animate-fade-in">
-                          {dailyTip || `আপনার শস্যের বর্তমান অবস্থা পর্যবেক্ষণ করুন। নিয়মিত যত্ন ফলন বাড়াতে সাহায্য করবে।`}
-                        </p>
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-3">
-                      <button onClick={() => { stopSpeech(); setCurrentView(View.PROFILE); }} className="bg-[#0A8A1F] text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all">বিস্তারিত প্রোফাইল</button>
-                      <button onClick={() => { stopSpeech(); setCurrentView(View.CROP_CALENDAR); }} className="bg-slate-100 text-slate-600 px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">শস্য ক্যালেন্ডার</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div className="max-w-7xl mx-auto px-4 py-12"><FeatureHighlights onNavigate={(v) => { stopSpeech(); setCurrentView(v); }} /></div>
-            <div className="max-w-7xl mx-auto px-4 mb-20"><ToolsHub onNavigate={(v) => { stopSpeech(); setCurrentView(v); }} /></div>
-            <FeaturedCourses onNavigate={(v) => { stopSpeech(); setCurrentView(v); }} />
-            <div className="max-w-7xl mx-auto px-4 py-16"><GoogleAdBanner /></div>
-            <MissionSection /><ContactFooter />
+            <StatsSection />
+            <FeatureHighlights onNavigate={handleNavigate} lang={lang} />
+            <FeaturedCourses onNavigate={handleNavigate} />
+            <MissionSection />
+            <ContactFooter />
           </div>
         );
-      case View.TOOLS: return <ToolsHub onNavigate={(v) => { stopSpeech(); setCurrentView(v); }} />;
-      case View.CHAT: return <ChatBot onBack={handleBack} userRank={user.progress.rank} userCrops={user.myCrops} onAction={() => handleAction(15)} onShowFeedback={showFeedback} />;
-      case View.SEARCH: return <SearchTool onBack={handleBack} onAction={() => handleAction(10)} onSaveReport={handleSaveReport} onShowFeedback={showFeedback} />;
-      case View.ANALYZER: return <Analyzer onBack={handleBack} userRank={user.progress.rank} userCrops={user.myCrops} onAction={() => handleAction(50)} onSaveReport={handleSaveReport} onShowFeedback={showFeedback} />;
-      case View.WEATHER: return <Weather onBack={handleBack} />;
-      case View.NUTRIENT_CALC: return <NutrientCalculator onBack={handleBack} user={user} onAction={() => handleAction(25)} onSaveReport={handleSaveReport} onShowFeedback={showFeedback} />;
-      case View.BIOCONTROL: return <BiocontrolGuide onBack={handleBack} onAction={() => handleAction(20)} onShowFeedback={showFeedback} />;
-      case View.SOIL_GUIDE: return <SoilGuide onBack={handleBack} onAction={() => handleAction(20)} onShowFeedback={showFeedback} />;
-      case View.DEFENSE_GUIDE: return <PlantDefenseGuide onBack={handleBack} />;
-      case View.PEST_EXPERT: return <PesticideExpert onBack={handleBack} onNavigate={setCurrentView} onAction={() => handleAction(30)} onSaveReport={handleSaveReport} onShowFeedback={showFeedback} />;
-      case View.SOIL_EXPERT: return <SoilExpert onBack={handleBack} onAction={() => handleAction(30)} onSaveReport={handleSaveReport} onShowFeedback={showFeedback} />;
-      case View.YIELD_CALCULATOR: return <YieldCalculator onBack={handleBack} onAction={() => handleAction(20)} />;
-      case View.AI_YIELD_PREDICTION: return <AIYieldPredictor onBack={handleBack} user={user} onAction={handleAction} onSaveReport={handleSaveReport} onShowFeedback={showFeedback} />;
-      case View.CROP_DISEASE_LIBRARY: return <CropDiseaseLibrary onBack={handleBack} onAction={() => handleAction(15)} onShowFeedback={showFeedback} />;
-      case View.QR_GENERATOR: return <QRGenerator onBack={handleBack} onAction={() => handleAction(10)} />;
-      case View.MONITORING: return <FieldMonitoring onBack={handleBack} onAction={() => handleAction(40)} onShowFeedback={showFeedback} />;
-      case View.LEAF_COLOR_CHART: return <LeafColorChart onBack={handleBack} onAction={() => handleAction(40)} onShowFeedback={showFeedback} />;
-      case View.LEARNING_CENTER: return <LearningCenter onBack={handleBack} onAction={handleAction} onSaveReport={handleSaveReport} onShowFeedback={showFeedback} />;
-      case View.PODCAST: return <AgriPodcast onBack={handleBack} onAction={handleAction} onShowFeedback={showFeedback} />;
-      case View.PROFILE: return <UserProfile onBack={handleBack} user={user} onUpdateUser={updateUser} onSaveReport={handleSaveReport} onToggleSpeech={toggleSpeechEnabled} speechEnabled={speechEnabled} />;
-      case View.ABOUT: return <About onBack={handleBack} onNavigate={setCurrentView} />;
-      case View.FLASHCARDS: return <FlashcardView onAction={handleAction} onBack={handleBack} />;
-      case View.TASK_SCHEDULER: return <TaskScheduler onBack={handleBack} user={user} onAction={() => handleAction(15)} />;
-      case View.FAQ: return <FAQ onBack={handleBack} onShowFeedback={showFeedback} />;
-      case View.CROP_CALENDAR: return <CropCalendar onBack={handleBack} user={user} onAction={() => handleAction(20)} onSaveReport={handleSaveReport} onShowFeedback={showFeedback} />;
-      default: return <Hero onNavigate={setCurrentView} />;
+      case View.TOOLS:
+        return <ToolsHub onNavigate={handleNavigate} lang={lang} />;
+      case View.CHAT:
+        return <ChatBot user={user} userRank={user.progress.rank} userCrops={user.myCrops} onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(20)} />;
+      case View.SEARCH:
+        return <SearchTool onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(10)} onSaveReport={handleSaveReport} />;
+      case View.ANALYZER:
+        return <Analyzer onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(50)} onSaveReport={handleSaveReport} userRank={user.progress.rank} userCrops={user.myCrops} onNavigate={handleNavigate} lang={lang} />;
+      case View.WEATHER:
+        return <Weather onBack={() => handleNavigate(View.HOME)} lang={lang} />;
+      case View.NUTRIENT_CALC:
+        return <NutrientCalculator user={user} onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(30)} onSaveReport={handleSaveReport} onNavigate={handleNavigate} lang={lang} />;
+      case View.BIOCONTROL:
+        return <BiocontrolGuide onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(15)} onSaveReport={handleSaveReport} />;
+      case View.SOIL_GUIDE:
+        return <SoilGuide onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(10)} onSaveReport={handleSaveReport} />;
+      case View.DEFENSE_GUIDE:
+        return <PlantDefenseGuide onBack={() => handleNavigate(View.HOME)} />;
+      case View.PEST_EXPERT:
+        return <PesticideExpert onBack={() => handleNavigate(View.HOME)} onNavigate={handleNavigate} onAction={() => handleAction(40)} onSaveReport={handleSaveReport} lang={lang} />;
+      case View.SOIL_EXPERT:
+        return <SoilExpert onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(45)} onSaveReport={handleSaveReport} lang={lang} />;
+      case View.YIELD_CALCULATOR:
+        return <YieldCalculator onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(25)} />;
+      case View.AI_YIELD_PREDICTION:
+        return <AIYieldPredictor user={user} onBack={() => handleNavigate(View.HOME)} onAction={handleAction} onSaveReport={handleSaveReport} lang={lang} />;
+      case View.CROP_DISEASE_LIBRARY:
+        return <CropDiseaseLibrary onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(15)} onSaveReport={handleSaveReport} />;
+      case View.QR_GENERATOR:
+        return <QRGenerator onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(5)} />;
+      case View.MONITORING:
+        return <FieldMonitoring onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(60)} onSaveReport={handleSaveReport} />;
+      case View.LEAF_COLOR_CHART:
+        return <LeafColorChart onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(35)} />;
+      case View.LEARNING_CENTER:
+        return <LearningCenter onBack={() => handleNavigate(View.HOME)} onAction={handleAction} />;
+      case View.PROFILE:
+        return <UserProfile user={user} onUpdateUser={(updates) => setUser(prev => ({ ...prev, ...updates }))} onSaveReport={handleSaveReport} onToggleSpeech={() => setSpeechEnabled(!speechEnabled)} speechEnabled={speechEnabled} onBack={() => handleNavigate(View.HOME)} />;
+      case View.ABOUT:
+        return <About onNavigate={handleNavigate} onBack={() => handleNavigate(View.HOME)} />;
+      case View.FLASHCARDS:
+        return <FlashcardView onBack={() => handleNavigate(View.HOME)} onAction={handleAction} />;
+      case View.TASK_SCHEDULER:
+        return <TaskScheduler user={user} onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(10)} />;
+      case View.FAQ:
+        return <FAQ onBack={() => handleNavigate(View.HOME)} />;
+      case View.CROP_CALENDAR:
+        return <CropCalendar user={user} onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(20)} onSaveReport={handleSaveReport} />;
+      case View.PODCAST:
+        return <AgriPodcast onBack={() => handleNavigate(View.HOME)} onAction={handleAction} />;
+      case View.CABI_TRAINING:
+        return <CABIDiagnosisTraining onBack={() => handleNavigate(View.HOME)} onAction={() => handleAction(100)} />;
+      case View.MAPS:
+        return <FieldMap onBack={() => handleNavigate(View.HOME)} lang={lang} />;
+      default:
+        return <Hero onNavigate={handleNavigate} lang={lang} />;
     }
   };
 
-  const BottomNavItem = ({ view, icon, label }: { view: View, icon: React.ReactNode, label: string }) => (
-    <button onClick={() => { stopSpeech(); setCurrentView(view); }} className={`flex flex-col items-center justify-center w-full py-2 transition-all ${currentView === view ? 'text-[#0A8A1F] scale-110' : 'text-gray-400 opacity-70'}`}>
-      <div className={currentView === view ? 'bg-green-50 p-2 rounded-xl' : ''}>{icon}</div>
-      <span className="text-[9px] mt-1 font-black uppercase tracking-tighter">{label}</span>
-    </button>
-  );
-
   return (
-    <SpeechContext.Provider value={{ isSpeaking, playSpeech, stopSpeech, speechEnabled, toggleSpeechEnabled }}>
-      <div className={`min-h-screen flex flex-col font-sans pb-16 transition-colors duration-500 ${user.settings?.theme === 'dark' ? 'bg-slate-900 text-white' : 'bg-slate-50 text-gray-900'}`}>
-        {showTour && <GuidedTour steps={MAIN_TOUR_STEPS} tourKey="main" onClose={() => setShowTour(false)} />}
-        <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} userRank={user.progress.rank} />
-        <ShareDialog isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} title="Krishi AI: স্মার্ট কৃষি ইকোসিস্টেম" content="বাংলাদেশের কৃষকদের জন্য আধুনিক এআই ভিত্তিক সমাধান।" installPrompt={installPrompt} onInstall={handleInstallApp} />
+    <SpeechContext.Provider value={{ playSpeech, stopSpeech, isSpeaking, speechEnabled, setSpeechEnabled }}>
+      <div className={`min-h-screen transition-colors duration-500 ${user.settings?.theme === 'dark' ? 'dark bg-slate-950' : 'bg-slate-50'}`}>
+        
+        {isShareOpen && (
+          <ShareDialog 
+            isOpen={isShareOpen} 
+            onClose={() => setIsShareOpen(false)} 
+            title={lang === 'bn' ? "কৃষি এআই: স্মার্ট কৃষি ইকোসিস্টেম" : "Krishi AI: Smart Agri Ecosystem"} 
+            content={lang === 'bn' ? "বাংলাদেশের কৃষকদের জন্য একটি সমন্বিত এআই ইকোসিস্টেম।" : "An integrated AI ecosystem for Bangladeshi farmers."}
+            installPrompt={installPrompt}
+            onInstall={() => {
+              if (installPrompt) {
+                installPrompt.prompt();
+                setInstallPrompt(null);
+              }
+            }}
+          />
+        )}
 
-        <header className={`sticky top-0 z-[70] border-b backdrop-blur-md px-4 h-16 flex items-center justify-between transition-colors ${user.settings?.theme === 'dark' ? 'bg-slate-900/80 border-slate-800' : 'bg-white/80 border-slate-100 shadow-sm'}`}>
-           <div className="cursor-pointer" onClick={() => { stopSpeech(); setCurrentView(View.HOME); }}>
-             <Logo showText size="sm" textColor={user.settings?.theme === 'dark' ? 'text-white' : 'text-slate-800'} />
+        <div className={`fixed inset-0 z-[1000] pointer-events-none ${isDrawerOpen ? 'pointer-events-auto' : ''}`}>
+           <div className={`absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity duration-500 ${isDrawerOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setIsDrawerOpen(false)}></div>
+           <div className={`absolute top-0 left-0 bottom-0 w-[85%] max-w-sm bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 transform ${isDrawerOpen ? 'translate-x-0' : '-translate-x-full'} overflow-y-auto`}>
+              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-emerald-600">
+                 <Logo size="md" showText style={{ color: 'white' }} />
+                 <button onClick={() => setIsDrawerOpen(false)} className="p-2 bg-white/20 rounded-xl text-white">✕</button>
+              </div>
+              <div className="p-6 space-y-8">
+                 <DrawerSection title={lang === 'bn' ? "প্রধান মেনু" : "Main Menu"}>
+                    <DrawerItem icon="🏠" label={lang === 'bn' ? "হোম স্ক্রিন" : "Home"} onClick={() => handleNavigate(View.HOME)} active={currentView === View.HOME} />
+                    <DrawerItem icon="👤" label={lang === 'bn' ? "আমার প্রোফাইল" : "Profile"} onClick={() => handleNavigate(View.PROFILE)} active={currentView === View.PROFILE} />
+                    <DrawerItem icon="🛠️" label={lang === 'bn' ? "সকল টুলস" : "All Tools"} onClick={() => handleNavigate(View.TOOLS)} active={currentView === View.TOOLS} />
+                    <DrawerItem icon="🎓" label={lang === 'bn' ? "শিখন কেন্দ্র" : "Learning Center"} onClick={() => handleNavigate(View.LEARNING_CENTER)} active={currentView === View.LEARNING_CENTER} />
+                 </DrawerSection>
+                 <DrawerSection title={lang === 'bn' ? "বিশেষজ্ঞ ডায়াগনোসিস" : "Expert Diagnosis"}>
+                    <DrawerItem icon="📸" label={lang === 'bn' ? "এআই স্ক্যানার" : "AI Scanner"} onClick={() => handleNavigate(View.ANALYZER)} active={currentView === View.ANALYZER} />
+                    <DrawerItem icon="🧪" label={lang === 'bn' ? "বালাইনাশক বিশেষজ্ঞ" : "Pesticide Expert"} onClick={() => handleNavigate(View.PEST_EXPERT)} active={currentView === View.PEST_EXPERT} />
+                    <DrawerItem icon="🔬" label={lang === 'bn' ? "CABI ট্রেনিং" : "CABI Training"} onClick={() => handleNavigate(View.CABI_TRAINING)} active={currentView === View.CABI_TRAINING} />
+                 </DrawerSection>
+              </div>
            </div>
+        </div>
+
+        <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 z-[100] px-4 flex items-center justify-between shadow-sm">
            <div className="flex items-center space-x-3">
-              {isSpeaking && (
-                <div className="flex items-center space-x-2 bg-rose-50 dark:bg-rose-900/30 px-3 py-1.5 rounded-full border border-rose-100 dark:border-rose-800 animate-pulse">
-                  <div className="flex space-x-0.5 items-end h-3">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="w-0.5 bg-rose-500 rounded-full animate-[bounce_0.6s_infinite]" style={{ animationDelay: `${i * 0.1}s`, height: `${40 + Math.random() * 60}%` }} />)}
-                  </div>
-                  <span className="text-[9px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest">Speaking</span>
+             <button onClick={() => setIsDrawerOpen(true)} className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-emerald-50 transition-colors">
+               <svg className="w-6 h-6 text-slate-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16m-7 6h7" /></svg>
+             </button>
+             <div className="flex items-center space-x-2 cursor-pointer" onClick={() => handleNavigate(View.HOME)}>
+               <Logo size="sm" showText={false} />
+               <span className="font-black text-lg tracking-tighter text-slate-800 dark:text-white hidden xs:block">Krishi <span className="text-emerald-600">AI</span></span>
+             </div>
+           </div>
+           
+           <div className="flex items-center space-x-2 md:space-x-4">
+              <button 
+                onClick={() => setIsShareOpen(true)}
+                className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-emerald-50 transition-all active:scale-90 border border-transparent hover:border-emerald-200"
+                title="Share & Install"
+              >
+                <svg className="w-5 h-5 text-slate-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </button>
+
+              <button 
+                onClick={() => { if (isSpeaking) stopSpeech(); setSpeechEnabled(!speechEnabled); }}
+                className={`p-2.5 rounded-xl transition-all flex items-center space-x-2 border shadow-sm active:scale-95 ${speechEnabled ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}
+                title={speechEnabled ? "Mute Read Aloud" : "Enable Read Aloud"}
+              >
+                <div className="relative">
+                  {speechEnabled ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                  )}
+                  {isSpeaking && <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>}
                 </div>
-              )}
-              <button onClick={() => setIsShareOpen(true)} className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-slate-500 hover:text-emerald-600 transition-all active:scale-90 shadow-sm">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                <span className="text-[10px] font-black uppercase hidden sm:block">
+                  {speechEnabled ? 'Read On' : 'Read Off'}
+                </span>
               </button>
-              <button onClick={() => { stopSpeech(); setCurrentView(View.PROFILE); }} className="w-9 h-9 rounded-full border-2 border-[#0A8A1F] overflow-hidden shadow-sm active:scale-90 transition-transform">
-                 <img src={user.photoURL || ''} alt="User" className="w-full h-full object-cover" />
-              </button>
+
+              <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-full flex items-center space-x-1 border border-slate-200 dark:border-slate-700">
+                <button 
+                  onClick={() => setLang('bn')} 
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${lang === 'bn' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 dark:text-slate-500 hover:text-emerald-500'}`}
+                >
+                  বাংলা
+                </button>
+                <button 
+                  onClick={() => setLang('en')} 
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${lang === 'en' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 dark:text-slate-500 hover:text-emerald-500'}`}
+                >
+                  EN
+                </button>
+              </div>
+              <FarmerAvatar 
+                user={user} 
+                size="md" 
+                showProgress={true} 
+                onClick={() => handleNavigate(View.PROFILE)} 
+              />
            </div>
         </header>
 
-        <main className="flex-1 overflow-x-hidden">{renderView()}</main>
-        
-        <div id="bottom-nav" className={`md:hidden fixed bottom-0 left-0 right-0 border-t flex justify-around items-center z-50 h-20 px-2 shadow-[0_-10px_30px_rgba(0,0,0,0.1)] transition-colors duration-500 ${user.settings?.theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'}`}>
-          <BottomNavItem view={View.HOME} label="হোম" icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 v4a1 1 0 001 1m-6 0h6" /></svg>} />
-          <BottomNavItem view={View.TOOLS} label="টুলস" icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>} />
-          <div className="relative -top-5">
-            <button id="hero-scanner-btn" onClick={() => { stopSpeech(); setCurrentView(View.ANALYZER); }} className={`w-16 h-16 rounded-full shadow-[0_20px_50px_rgba(10,138,31,0.3)] flex items-center justify-center text-white transition-transform active:scale-90 ${currentView === View.ANALYZER ? 'bg-[#0A8A1F] scale-110' : 'bg-slate-900'}`}>
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812-1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><circle cx="12" cy="13" r="3" /></svg>
-            </button>
+        <main className="pt-16 pb-24 min-h-screen">
+          {renderView()}
+        </main>
+
+        <nav className="fixed bottom-4 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200 dark:border-slate-800 z-[100] px-2 py-2 flex justify-around items-center max-w-sm mx-auto rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)]">
+          <NavButton active={currentView === View.HOME} icon="🏠" label={lang === 'bn' ? "হোম" : "Home"} onClick={() => handleNavigate(View.HOME)} />
+          <NavButton active={currentView === View.TOOLS} icon="🛠️" label={lang === 'bn' ? "টুলস" : "Tools"} onClick={() => handleNavigate(View.TOOLS)} />
+          <div className="relative -mt-10 group">
+             <div className="absolute inset-0 bg-emerald-500 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+             <button 
+               onClick={() => handleNavigate(View.ANALYZER)}
+               className={`relative w-16 h-16 rounded-[1.8rem] flex items-center justify-center text-3xl shadow-2xl transition-all duration-300 transform active:scale-90 ${currentView === View.ANALYZER ? 'bg-white text-emerald-600 border-4 border-emerald-500 rotate-12' : 'bg-emerald-600 text-white'}`}
+             >
+                📸
+             </button>
+             <p className="text-[7px] font-black uppercase text-center mt-2 tracking-widest text-emerald-600 dark:text-emerald-400">{lang === 'bn' ? 'এআই স্ক্যান' : 'AI Scan'}</p>
           </div>
-          <BottomNavItem view={View.LEARNING_CENTER} label="শিখন" icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.168 0.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332 0.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332 0.477-4.5 1.253" /></svg>} />
-          <BottomNavItem view={View.FAQ} label="সহায়তা" icon={<Logo size="sm" variant="info" className={currentView === View.FAQ ? '' : 'grayscale opacity-50'} />} />
-        </div>
+          <NavButton active={currentView === View.LEARNING_CENTER} icon="🎓" label={lang === 'bn' ? "শিখুন" : "Learn"} onClick={() => handleNavigate(View.LEARNING_CENTER)} />
+          <NavButton active={currentView === View.PROFILE} icon="👤" label={lang === 'bn' ? "প্রোফাইল" : "Profile"} onClick={() => handleNavigate(View.PROFILE)} />
+        </nav>
       </div>
     </SpeechContext.Provider>
   );
 };
 
-const StatCard = ({ label, val, icon, color }: any) => (
-  <div className="bg-white rounded-[2rem] p-5 shadow-xl border border-slate-100 flex flex-col items-center text-center group hover:shadow-2xl transition-all">
-     <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">{icon}</div>
-     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-     <p className={`text-xl font-black ${color}`}>{val}</p>
+const DrawerSection = ({ title, children }: any) => (
+  <div className="space-y-3">
+     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{title}</h4>
+     <div className="grid grid-cols-1 gap-2">
+        {children}
+     </div>
   </div>
+);
+
+const DrawerItem = ({ icon, label, onClick, active }: any) => (
+  <button 
+     onClick={onClick}
+     className={`flex items-center space-x-4 p-4 rounded-2xl transition-all ${active ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 shadow-sm' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+  >
+     <span className="text-xl">{icon}</span>
+     <span className="font-bold text-sm">{label}</span>
+  </button>
+);
+
+const NavButton = ({ active, icon, label, onClick }: any) => (
+  <button onClick={onClick} className={`flex-1 flex flex-col items-center p-2 rounded-2xl transition-all duration-300 ${active ? 'text-[#0A8A1F] scale-110' : 'text-slate-400 hover:text-slate-600'}`}>
+    <span className="text-xl leading-none">{icon}</span>
+    <span className="text-[7px] md:text-[8px] font-black uppercase mt-1 tracking-tighter">{label}</span>
+  </button>
 );
 
 export default App;

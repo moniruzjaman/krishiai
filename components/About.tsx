@@ -6,9 +6,11 @@ import FeedbackModal from './FeedbackModal';
 
 interface AboutProps {
   onNavigate: (view: View) => void;
+  // Fix: Added missing onBack prop
+  onBack?: () => void;
 }
 
-const About: React.FC<AboutProps> = ({ onNavigate }) => {
+const About: React.FC<AboutProps> = ({ onNavigate, onBack }) => {
   const [aiNarrative, setAiNarrative] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -32,7 +34,8 @@ const About: React.FC<AboutProps> = ({ onNavigate }) => {
       <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
       
       <div className="flex items-center space-x-4 mb-12">
-        <button onClick={() => onNavigate(View.HOME)} className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:bg-slate-50 transition-all active:scale-90">
+        {/* Fix: Use onBack prop if available */}
+        <button onClick={() => onBack ? onBack() : onNavigate(View.HOME)} className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:bg-slate-50 transition-all active:scale-90">
           <svg className="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>

@@ -1,376 +1,361 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { identifyPlantSpecimen, generateSpeech, decodeBase64, decodeAudioData, getAgriQuiz, searchAgriculturalInfo } from '../services/geminiService';
-import { GroundingChunk, SavedReport, AgriQuizQuestion } from '../types';
-import ShareDialog from './ShareDialog';
+import { 
+  identifyPlantSpecimen, 
+  generateAgriQuiz, 
+  searchEncyclopedia, 
+  generateSpeech, 
+  decodeBase64, 
+  decodeAudioData 
+} from '../services/geminiService';
+import { AgriQuizQuestion, Language, GroundingChunk } from '../types';
+import { useSpeech } from '../App';
 
 interface LearningCenterProps {
+  onBack: () => void;
   onAction: (xp: number) => void;
-  onSaveReport?: (report: Omit<SavedReport, 'id' | 'timestamp'>) => void;
-  onShowFeedback?: () => void;
 }
 
-const plantIdLoadingSteps = [
-  "উদ্ভিদ নমুনা চিত্র বিশ্লেষণ করা হচ্ছে...",
-  "CABI ট্যাক্সোনমি এবং উদ্ভিদ ডাটাবেস যাচাই চলছে...",
-  "বৈজ্ঞানিক নাম ও পরিবারের তথ্য শনাক্ত করা হচ্ছে...",
-  "উদ্ভিদের গুণাগুণ ও বৈশিষ্ট্য বিশ্লেষণ হচ্ছে...",
-  "বিস্তারিত রিপোর্ট চূড়ান্ত করা হচ্ছে..."
-];
-
-const quizLoadingSteps = [
-  "আপনার নির্বাচিত বিষয় বিশ্লেষণ করা হচ্ছে...",
-  "BARI/BRRI কারিকুলাম অনুযায়ী প্রশ্ন তৈরি করা হচ্ছে...",
-  "সঠিক উত্তরের যুক্তি এবং ব্যাখ্যা সাজানো হচ্ছে...",
-  "কুইজ চ্যালেঞ্জ প্রস্তুত করা হচ্ছে..."
-];
-
-const LearningCenter: React.FC<LearningCenterProps> = ({ onAction, onSaveReport, onShowFeedback }) => {
+const LearningCenter: React.FC<LearningCenterProps> = ({ onBack, onAction }) => {
   const [activeMode, setActiveMode] = useState<'menu' | 'scan' | 'quiz' | 'dictionary'>('menu');
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
-  const [report, setReport] = useState<{ text: string, groundingChunks: GroundingChunk[] } | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isShareOpen, setIsShareOpen] = useState(false);
-  
-  const [quizTopic, setQuizTopic] = useState('');
-  const [quizQuestions, setQuizQuestions] = useState<AgriQuizQuestion[]>([]);
-  const [currentQuizIdx, setCurrentQuizIdx] = useState(0);
-  const [score, setScore] = useState(0);
-  const [isQuizLoading, setIsQuizLoading] = useState(false);
-  const [quizFinished, setQuizFinished] = useState(false);
+  const [lang] = useState<Language>('bn');
+  const { playSpeech, stopSpeech, isSpeaking } = useSpeech();
 
-  const [dictQuery, setDictQuery] = useState('');
-  const [dictResult, setDictResult] = useState<{ text: string, groundingChunks: GroundingChunk[] } | null>(null);
+  const DashboardCard = ({ icon, title, desc, onClick, color }: any) => (
+    <button 
+      onClick={onClick}
+      className={`${color} p-8 rounded-[3rem] text-white text-left shadow-xl hover:scale-[1.02] transition-all active:scale-95 group relative overflow-hidden h-full flex flex-col`}
+    >
+      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+      <div className="text-5xl mb-6 transform group-hover:rotate-12 transition-transform">{icon}</div>
+      <h3 className="text-2xl font-black mb-3 tracking-tight">{title}</h3>
+      <p className="text-sm font-medium opacity-80 leading-relaxed flex-1">{desc}</p>
+      <div className="mt-8 flex justify-end">
+        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-emerald-600 transition-all">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+        </div>
+      </div>
+    </button>
+  );
 
+  return (
+    <div className="max-w-6xl mx-auto p-4 animate-fade-in font-sans pb-32">
+      <div className="flex items-center space-x-4 mb-12">
+        <button onClick={activeMode === 'menu' ? onBack : () => { setActiveMode('menu'); stopSpeech(); }} className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:bg-slate-50 transition-all active:scale-90 text-slate-400">
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+        </button>
+        <div>
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-none">কৃষি শিখন কেন্দ্র</h1>
+          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1">International Scientific Standards</p>
+        </div>
+      </div>
+
+      {activeMode === 'menu' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in px-2">
+          <DashboardCard 
+            icon="🔬" 
+            title="CABI ডায়াগনোসিস মাস্টারক্লাস" 
+            desc="আন্তর্জাতিক মানের রোগ শনাক্তকরণ পদ্ধতি শিখুন ও সার্টিফিকেট পান।" 
+            onClick={() => window.dispatchEvent(new CustomEvent('agritech_navigate', { detail: 'CABI_TRAINING' }))} 
+            color="bg-rose-600" 
+          />
+          <DashboardCard icon="🌿" title="উদ্ভিদ শনাক্তকরণ" desc="যেকোনো গাছের ছবি তুলে তার বৈজ্ঞানিক নাম ও গুণাগুণ জানুন।" onClick={() => setActiveMode('scan')} color="bg-emerald-600" />
+          <DashboardCard icon="🧠" title="এআই কৃষি কুইজ" desc="আপনার কৃষি জ্ঞান যাচাই করুন এবং নতুন XP অর্জন করুন।" onClick={() => setActiveMode('quiz')} color="bg-blue-600" />
+          <DashboardCard icon="📖" title="এআই এনসাইক্লোপিডিয়া" desc="জটিল কৃষি টার্ম বা পদ্ধতির সহজ ব্যাখ্যা খুঁজুন।" onClick={() => setActiveMode('dictionary')} color="bg-indigo-600" />
+        </div>
+      )}
+
+      {activeMode === 'scan' && <PlantScanner onComplete={(xp: number) => { onAction(xp); setActiveMode('menu'); }} onCancel={() => setActiveMode('menu')} lang={lang} />}
+      {activeMode === 'quiz' && <QuizModule onComplete={(xp: number) => { onAction(xp); setActiveMode('menu'); }} lang={lang} />}
+      {activeMode === 'dictionary' && <Encyclopedia lang={lang} />}
+    </div>
+  );
+};
+
+/* Sub-Module: Plant Scanner */
+const PlantScanner = ({ onComplete, onCancel, lang }: any) => {
+  const [image, setImage] = useState<string | null>(null);
+  const [report, setReport] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
-  const recognitionRef = useRef<any>(null);
+  const { playSpeech, isSpeaking, stopSpeech } = useSpeech();
 
-  useEffect(() => {
-    let interval: any;
-    if (isLoading || isQuizLoading) {
-      interval = setInterval(() => {
-        setLoadingStep(prev => (prev + 1) % 5);
-      }, 2500);
-    }
-    return () => clearInterval(interval);
-  }, [isLoading, isQuizLoading]);
-
-  useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.lang = 'bn-BD';
-      recognitionRef.current.onstart = () => setIsListening(true);
-      recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (activeMode === 'quiz') setQuizTopic(transcript);
-        if (activeMode === 'dictionary') setDictQuery(transcript);
-      };
-      recognitionRef.current.onerror = () => setIsListening(false);
-      recognitionRef.current.onend = () => setIsListening(false);
-    }
-  }, [activeMode]);
-
-  const toggleListening = () => {
-    if (!recognitionRef.current) return alert("ভয়েস ইনপুট আপনার ব্রাউজারে সমর্থিত নয়।");
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      recognitionRef.current.start();
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = (reader.result as string).split(',')[1];
-        setIsLoading(true); 
-        setReport(null);
-        setLoadingStep(0);
-
-        if (!audioContextRef.current) {
-            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-        }
-        if (audioContextRef.current.state === 'suspended') {
-            audioContextRef.current.resume();
-        }
-
+      reader.onload = async (ev) => {
+        const base64 = (ev.target?.result as string).split(',')[1];
+        setImage(ev.target?.result as string);
+        setIsLoading(true);
         try {
-          const res = await identifyPlantSpecimen(base64, file.type);
-          setReport(res); 
-          if (res.text) playTTS(res.text);
-          onAction(30);
-          if (onShowFeedback) onShowFeedback();
-        } catch (err) { 
-          alert("শনাক্তকরণ ব্যর্থ হয়েছে।"); 
-        } finally { 
-          setIsLoading(false); 
-        }
+          const res = await identifyPlantSpecimen(base64, file.type, lang);
+          setReport(res.text);
+          if (res.text) playSpeech(res.text);
+          onComplete(30);
+        } catch (err) {
+          alert("Error identifying plant.");
+        } finally { setIsLoading(false); }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSave = (data?: string) => {
-    const textToSave = data || report?.text || dictResult?.text;
-    if (textToSave && onSaveReport) {
-      onSaveReport({
-        type: 'Learning Resource',
-        title: activeMode === 'dictionary' ? `ডিকশনারি: ${dictQuery}` : 'শিখন কেন্দ্র রিপোর্ট',
-        content: textToSave,
-        icon: '🎓'
-      });
-      alert("সংরক্ষণ করা হয়েছে!");
-    }
-  };
+  return (
+    <div className="bg-white rounded-[4rem] p-10 shadow-2xl border border-slate-100 animate-fade-in-up">
+      <div className="text-center mb-10">
+        <div className="w-20 h-20 bg-emerald-50 rounded-[2rem] flex items-center justify-center mx-auto text-4xl mb-6 shadow-inner">🌿</div>
+        <h2 className="text-3xl font-black text-slate-800">উদ্ভিদ শনাক্তকরণ</h2>
+        <p className="text-slate-500 font-medium max-w-sm mx-auto mt-2">যেকোনো কৃষি গাছের ছবি নিন, এআই তার বিস্তারিত পরিচয় জানাবে।</p>
+      </div>
 
-  const startQuiz = async () => {
-    if (!quizTopic.trim()) return alert("একটি বিষয় লিখুন।");
-    setIsQuizLoading(true);
-    setQuizQuestions([]);
-    setQuizFinished(false);
-    setScore(0);
-    setCurrentQuizIdx(0);
-    setLoadingStep(0);
-    try {
-      const questions = await getAgriQuiz(quizTopic);
-      setQuizQuestions(questions);
-    } catch (e) {
-      alert("কুইজ তৈরি করা সম্ভব হয়নি।");
-    } finally {
-      setIsQuizLoading(false);
-    }
-  };
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        <div className="space-y-6">
+           <div className="aspect-square bg-slate-50 rounded-[3rem] border-4 border-dashed border-slate-200 flex flex-col items-center justify-center overflow-hidden relative group">
+              {image ? (
+                <img src={image} className="w-full h-full object-cover" alt="Sample" />
+              ) : (
+                <div className="text-center px-10">
+                   <div className="text-5xl mb-4 grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all">📸</div>
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">Take or Upload a photography</p>
+                </div>
+              )}
+              <input type="file" ref={fileInputRef} className="hidden" onChange={handleScan} accept="image/*" />
+           </div>
+           {!report && !isLoading && (
+             <button onClick={() => fileInputRef.current?.click()} className="w-full bg-emerald-600 text-white py-6 rounded-[2.2rem] font-black text-lg shadow-xl active:scale-95 transition-all">ছবি নির্বাচন করুন</button>
+           )}
+        </div>
 
-  const handleDictSearch = async () => {
-    if (!dictQuery.trim()) return;
+        <div className="flex flex-col">
+           {isLoading ? (
+             <div className="flex-1 flex flex-col items-center justify-center space-y-6 bg-slate-50 rounded-[3rem]">
+                <div className="w-12 h-12 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Analysing Specimen...</p>
+             </div>
+           ) : report ? (
+             <div className="flex-1 bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden">
+                <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/10">
+                   <span className="text-[10px] font-black uppercase text-emerald-400 tracking-[0.2em]">Scientific Identification</span>
+                   <button onClick={() => playSpeech(report)} className={`p-3 rounded-full ${isSpeaking ? 'bg-rose-500 animate-pulse' : 'bg-white text-emerald-600'}`}>
+                      {isSpeaking ? '🔇' : '🔊'}
+                   </button>
+                </div>
+                <div className="prose prose-invert max-w-none text-slate-300 font-medium leading-relaxed whitespace-pre-wrap text-lg">
+                   {report}
+                </div>
+                <button onClick={() => { setReport(null); setImage(null); stopSpeech(); }} className="mt-10 w-full py-4 border border-white/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5">আরেকটি স্ক্যান করুন</button>
+             </div>
+           ) : (
+             <div className="flex-1 border-4 border-dashed border-slate-100 rounded-[3rem] flex flex-col items-center justify-center opacity-30">
+                <span className="text-7xl mb-4">🔎</span>
+                <p className="text-sm font-black uppercase">Result Preview</p>
+             </div>
+           )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* Sub-Module: Agri Quiz */
+const QuizModule = ({ onComplete, lang }: any) => {
+  const [topic, setTopic] = useState('');
+  const [questions, setQuestions] = useState<AgriQuizQuestion[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFinished, setIsFinished] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
+
+  const startQuiz = async (selectedTopic: string) => {
+    setTopic(selectedTopic);
     setIsLoading(true);
-    setDictResult(null);
+    setQuestions([]);
+    setCurrentIndex(0);
+    setScore(0);
+    setIsFinished(false);
+    setSelectedAnswer(null);
+    setShowExplanation(false);
     try {
-      const res = await searchAgriculturalInfo(`Define and explain "${dictQuery}" in the context of agriculture for a student. Respond in Bangla.`);
-      setDictResult(res);
-      if (res.text) playTTS(res.text);
-      onAction(15);
-      if (onShowFeedback) onShowFeedback();
-    } catch (e) {
-      alert("তথ্য পাওয়া যায়নি।");
-    } finally {
-      setIsLoading(false);
-    }
+      const data = await generateAgriQuiz(selectedTopic, lang);
+      setQuestions(data);
+    } catch (e) { alert("Quiz generation failed."); }
+    finally { setIsLoading(false); }
   };
 
   const handleAnswer = (idx: number) => {
-    if (idx === quizQuestions[currentQuizIdx].correctAnswer) {
-      setScore(prev => prev + 1);
+    if (selectedAnswer !== null) return;
+    setSelectedAnswer(idx);
+    if (idx === questions[currentIndex].correctAnswer) {
+      setScore(s => s + 1);
     }
-    if (currentQuizIdx < quizQuestions.length - 1) {
-      setCurrentQuizIdx(prev => prev + 1);
+    setShowExplanation(true);
+  };
+
+  const nextQuestion = () => {
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      setSelectedAnswer(null);
+      setShowExplanation(false);
     } else {
-      setQuizFinished(true);
-      onAction(50);
-      if (onShowFeedback) onShowFeedback();
+      setIsFinished(true);
+      onComplete(score * 20); // XP based on score
     }
   };
 
-  const playTTS = async (textOverride?: string) => {
-    const textToSpeak = textOverride || report?.text || dictResult?.text;
-    if (!textToSpeak) return;
-
-    if (isPlaying && !textOverride) { 
-      stopTTS(); 
-      return; 
-    }
-
-    try {
-      stopTTS();
-      setIsPlaying(true);
-      if (!audioContextRef.current) { 
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 }); 
-      }
-      const ctx = audioContextRef.current;
-      if (ctx.state === 'suspended') await ctx.resume();
-      
-      const cleanText = textToSpeak.replace(/[*#_~]/g, '');
-      const base64Audio = await generateSpeech(cleanText);
-      const audioBuffer = await decodeAudioData(decodeBase64(base64Audio), ctx, 24000, 1);
-      
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      source.onended = () => setIsPlaying(false);
-      currentSourceRef.current = source;
-      source.start(0);
-    } catch (e) { 
-      setIsPlaying(false); 
-    }
-  };
-
-  const stopTTS = () => { 
-    if (currentSourceRef.current) { 
-      currentSourceRef.current.stop(); 
-      currentSourceRef.current = null; 
-    } 
-    setIsPlaying(false); 
-  };
-
-  const DashboardCard = ({ icon, title, desc, onClick, color }: any) => (
-    <button onClick={onClick} className={`bg-white p-8 rounded-[2.5rem] shadow-xl hover:shadow-2xl transition-all border border-slate-100 group flex flex-col text-left relative overflow-hidden`}>
-      <div className={`absolute top-0 right-0 w-24 h-24 rounded-full -mr-12 -mt-12 opacity-5 ${color}`}></div>
-      <div className={`w-16 h-16 ${color.replace('bg-', 'bg-opacity-10 bg-')} rounded-2xl flex items-center justify-center text-4xl mb-6 shadow-inner group-hover:scale-110 transition-transform`}>{icon}</div>
-      <h3 className="text-xl font-black text-slate-800 mb-2 tracking-tight group-hover:text-emerald-600 transition-colors">{title}</h3>
-      <p className="text-sm font-medium text-slate-400 leading-relaxed">{desc}</p>
-    </button>
+  if (isLoading) return (
+    <div className="bg-white p-24 rounded-[4rem] shadow-xl text-center flex flex-col items-center space-y-8">
+      <div className="w-16 h-16 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
+      <h3 className="text-2xl font-black text-slate-800">আপনার জন্য কুইজ তৈরি হচ্ছে...</h3>
+    </div>
   );
 
+  if (!questions.length && !isFinished) return (
+    <div className="bg-white p-12 rounded-[4rem] shadow-2xl text-center animate-fade-in border border-slate-100">
+      <div className="w-20 h-20 bg-blue-50 rounded-[2rem] flex items-center justify-center mx-auto text-4xl mb-8">🧠</div>
+      <h2 className="text-3xl font-black text-slate-800 mb-4">আপনার বিষয় নির্বাচন করুন</h2>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
+        {['ধান চাষ', 'মৃত্তিকা পুষ্টি', 'জৈবিক দমন', 'স্মার্ট প্রযুক্তি', 'বাজার ব্যবস্থাপনা', 'সার প্রয়োগ'].map(t => (
+          <button key={t} onClick={() => startQuiz(t)} className="p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl font-black text-slate-700 hover:border-blue-500 hover:bg-blue-50 transition-all active:scale-95 text-sm">{t}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (isFinished) return (
+    <div className="bg-slate-900 rounded-[4rem] p-16 text-center text-white shadow-2xl animate-fade-in relative overflow-hidden">
+       <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+       <div className="text-8xl mb-8">🏆</div>
+       <h2 className="text-4xl font-black mb-4">কুইজ সম্পন্ন!</h2>
+       <p className="text-xl font-medium text-slate-400 mb-10">আপনার স্কোর: <span className="text-blue-400 font-black">{score} / {questions.length}</span></p>
+       <div className="bg-white/5 border border-white/10 px-8 py-4 rounded-full inline-block font-black uppercase tracking-widest text-emerald-400">+{score * 20} XP অর্জিত</div>
+       <button onClick={() => { setQuestions([]); setIsFinished(false); }} className="mt-12 block w-full bg-blue-600 py-6 rounded-[2.2rem] font-black text-lg">অন্য বিষয় চেষ্টা করুন</button>
+    </div>
+  );
+
+  const q = questions[currentIndex];
+
   return (
-    <div className="max-w-6xl mx-auto p-4 pb-32 animate-fade-in font-sans">
-      <ShareDialog isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} title="শিখন কেন্দ্র" content={report?.text || dictResult?.text || ""} />
+    <div className="bg-white rounded-[4rem] p-10 md:p-16 shadow-2xl border border-slate-100 animate-fade-in">
+      <div className="flex justify-between items-center mb-12">
+         <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">{topic} কুইজ</span>
+         <span className="bg-slate-100 px-4 py-1 rounded-full text-xs font-black text-slate-500">{currentIndex + 1} / {questions.length}</span>
+      </div>
       
-      <div className="flex items-center space-x-4 mb-10">
-        <button onClick={() => { activeMode === 'menu' ? window.history.back() : setActiveMode('menu'); stopTTS(); }} className="p-3 bg-white rounded-2xl shadow-sm border hover:bg-slate-50 transition-all active:scale-90 text-slate-400">
-          <svg className="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-        </button>
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">কৃষি শিখন কেন্দ্র</h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Academic & Research Hub</p>
-        </div>
+      <h3 className="text-3xl font-black text-slate-800 leading-tight mb-12">"{q.question}"</h3>
+
+      <div className="grid grid-cols-1 gap-4 mb-10">
+        {q.options.map((opt, i) => {
+          const isCorrect = i === q.correctAnswer;
+          const isSelected = selectedAnswer === i;
+          return (
+            <button 
+              key={i}
+              onClick={() => handleAnswer(i)}
+              className={`text-left p-6 rounded-[2rem] border-2 font-black transition-all text-lg flex items-center space-x-5 ${
+                selectedAnswer === null ? 'bg-slate-50 border-slate-100 hover:border-blue-400 hover:bg-white' :
+                isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-700' :
+                isSelected ? 'bg-rose-50 border-rose-500 text-rose-700' : 'bg-slate-50 border-slate-100 opacity-50'
+              }`}
+            >
+              <span className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xs shadow-sm shrink-0">{String.fromCharCode(65+i)}</span>
+              <span>{opt}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {activeMode === 'menu' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-          <DashboardCard icon="🌿" title="উদ্ভিদ শনাক্তকরণ" desc="যেকোনো গাছের ছবি তুলে তার বৈজ্ঞানিক নাম ও গুণাগুণ জানুন।" onClick={() => setActiveMode('scan')} color="bg-emerald-600" />
-          <DashboardCard icon="🧠" title="এআই কৃষি কুইজ" desc="আপনার কৃষি জ্ঞান যাচাই করুন এবং নতুন XP অর্জন করুন।" onClick={() => setActiveMode('quiz')} color="bg-blue-600" />
-          <DashboardCard icon="📖" title="এআই এনসাইক্লোপিডিয়া" desc="জটিল কৃষি টার্ম বা পদ্ধতির সহজ ব্যাখ্যা খুঁজুন।" onClick={() => setActiveMode('dictionary')} color="bg-indigo-600" />
-          <DashboardCard icon="🎴" title="কৃষি ফ্ল্যাশকার্ড" desc="মজার মাধ্যমে শস্য পুষ্টি ও চাষাবাদ পদ্ধতি শিখুন।" onClick={() => window.dispatchEvent(new CustomEvent('agritech_navigate', { detail: 'FLASHCARDS' }))} color="bg-amber-600" />
+      {showExplanation && (
+        <div className="p-8 bg-blue-50 rounded-[2.5rem] border border-blue-100 animate-fade-in mb-8">
+           <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest mb-2">ব্যাখ্যা (AI Insight)</p>
+           <p className="text-sm font-bold text-blue-900 leading-relaxed">{q.explanation}</p>
         </div>
       )}
 
-      {activeMode === 'scan' && (
-        <div className="space-y-8 animate-fade-in max-w-4xl mx-auto">
-           {!isLoading && (
-             <div className="bg-white rounded-[3rem] p-10 shadow-xl border border-slate-100 text-center relative overflow-hidden group">
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                <div className="w-20 h-20 bg-emerald-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6 text-4xl shadow-inner border border-emerald-100">🌿</div>
-                <h2 className="text-2xl font-black text-slate-800 mb-4 tracking-tight">উদ্ভিদ নমুনা শনাক্তকরণ</h2>
-                <button onClick={() => fileInputRef.current?.click()} className="w-full bg-emerald-600 text-white font-black py-5 rounded-2xl shadow-xl transition-all text-xl active:scale-95">ছবি আপলোড করুন</button>
-             </div>
-           )}
-           {isLoading && (
-             <div className="bg-white rounded-[3rem] p-16 text-center shadow-xl border border-slate-100 flex flex-col items-center space-y-8 animate-fade-in">
-                <div className="relative w-28 h-28">
-                   <div className="absolute inset-0 border-8 border-blue-50 rounded-full animate-spin border-t-blue-600"></div>
-                   <div className="absolute inset-0 flex items-center justify-center text-4xl">🔬</div>
-                </div>
-                <h3 className="text-2xl font-black text-slate-800">{plantIdLoadingSteps[loadingStep % plantIdLoadingSteps.length]}</h3>
-             </div>
-           )}
-           {report && !isLoading && (
-             <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-2xl border-t-[14px] border-emerald-600 relative overflow-hidden flex flex-col">
-                <div className="flex flex-col md:flex-row justify-between items-start mb-8 pb-6 border-b border-slate-100 gap-6 relative z-10">
-                   <div>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-1">শনাক্তকৃত উদ্ভিদ রিপোর্ট</h3>
-                      <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Grounding: CABI & Local Flora DB</p>
-                   </div>
-                   <div className="flex items-center space-x-2">
-                      <button onClick={() => setIsShareOpen(true)} className="p-4 rounded-full bg-slate-100 text-slate-600"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg></button>
-                      <button onClick={() => playTTS()} className={`p-4 rounded-full shadow-lg ${isPlaying ? 'bg-rose-500 text-white animate-pulse' : 'bg-emerald-600 text-white'}`}>{isPlaying ? '🔇' : '🔊'}</button>
-                      <button onClick={()=>handleSave()} className="p-4 rounded-full bg-slate-900 text-white shadow-lg"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 5h14m-14 0v14l7-7 7 7V5m-14 0h14" /></svg></button>
-                   </div>
-                </div>
-                <div className="prose prose-slate max-w-none font-medium leading-relaxed whitespace-pre-wrap text-lg first-letter:text-5xl first-letter:font-black first-letter:float-left first-letter:mr-4 first-letter:text-emerald-600">{report.text}</div>
-             </div>
-           )}
-        </div>
+      {selectedAnswer !== null && (
+        <button onClick={nextQuestion} className="w-full bg-slate-900 text-white py-6 rounded-[2.2rem] font-black text-lg shadow-xl active:scale-95 transition-all">পরবর্তী প্রশ্ন</button>
       )}
+    </div>
+  );
+};
 
-      {activeMode === 'quiz' && (
-        <div className="max-w-3xl mx-auto animate-fade-in">
-           {!quizQuestions.length && !quizFinished && (
-             <div className="bg-white rounded-[3rem] p-10 shadow-xl border border-slate-100 space-y-6 text-center">
-                <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto text-4xl shadow-inner">🧠</div>
-                {isQuizLoading ? (
-                   <div className="py-10 animate-fade-in space-y-6">
-                      <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                      <h3 className="text-xl font-black text-slate-800">{quizLoadingSteps[loadingStep % quizLoadingSteps.length]}</h3>
-                   </div>
-                ) : (
-                   <div className="space-y-6">
-                    <h2 className="text-2xl font-black text-slate-800">এআই কৃষি কুইজ</h2>
-                    <p className="text-slate-500 font-medium max-w-sm mx-auto">একটি বিষয় লিখুন (যেমন: ব্রি ধান৭৪, স্মার্ট সেচ) এবং এআই আপনার জন্য প্রশ্ন তৈরি করবে।</p>
-                    <div className="relative">
-                        <input type="text" value={quizTopic} onChange={(e) => setQuizTopic(e.target.value)} placeholder="বিষয় লিখুন..." className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-5 pr-12 font-bold text-slate-700 outline-none focus:border-blue-600 shadow-inner" onKeyDown={(e) => e.key === 'Enter' && startQuiz()} />
-                        <button onClick={toggleListening} className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-50 text-slate-400 hover:text-blue-600'}`}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></button>
-                    </div>
-                    <button onClick={startQuiz} className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl active:scale-95 text-lg">কুইজ শুরু করুন</button>
-                   </div>
-                )}
-             </div>
-           )}
-           {quizQuestions.length > 0 && !quizFinished && (
-             <div className="bg-white rounded-[3rem] p-10 shadow-2xl border-t-[12px] border-blue-600 animate-fade-in">
-                <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-50">
-                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">প্রশ্ন: {currentQuizIdx + 1} / {quizQuestions.length}</span>
-                   <span className="text-xs font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full">স্কোর: {score}</span>
-                </div>
-                <h3 className="text-2xl font-black text-slate-800 mb-10 leading-tight">{quizQuestions[currentQuizIdx].question}</h3>
-                <div className="grid grid-cols-1 gap-4">
-                   {quizQuestions[currentQuizIdx].options.map((opt, i) => (
-                     <button key={i} onClick={() => handleAnswer(i)} className="bg-slate-50 border-2 border-slate-100 p-6 rounded-2xl text-left font-bold text-slate-700 hover:border-blue-600 hover:bg-white transition-all shadow-sm"><span className="w-8 h-8 bg-white rounded-lg inline-flex items-center justify-center mr-4 shadow-sm text-blue-600 font-black">{i + 1}</span>{opt}</button>
-                   ))}
-                </div>
-             </div>
-           )}
-           {quizFinished && (
-             <div className="bg-white rounded-[3rem] p-12 shadow-2xl text-center animate-fade-in border-4 border-emerald-500/20">
-                <div className="text-7xl mb-8">🎉</div>
-                <h2 className="text-3xl font-black text-slate-800 mb-10">কুইজ সম্পন্ন! আপনার স্কোর: {score}</h2>
-                <button onClick={() => { setQuizQuestions([]); setQuizFinished(false); setActiveMode('menu'); }} className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black shadow-xl">ফিরে যান</button>
-             </div>
-           )}
-        </div>
-      )}
+/* Sub-Module: Encyclopedia */
+const Encyclopedia = ({ lang }: any) => {
+  const [query, setQuery] = useState('');
+  const [result, setResult] = useState<{ text: string; groundingChunks: GroundingChunk[] } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { playSpeech, isSpeaking, stopSpeech } = useSpeech();
 
-      {activeMode === 'dictionary' && (
-        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
-           <div className="bg-white rounded-[3rem] p-10 shadow-xl border border-slate-100 text-center relative overflow-hidden">
-              <div className="w-20 h-20 bg-indigo-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6 text-4xl shadow-inner border border-indigo-100">📖</div>
-              <h2 className="text-2xl font-black text-slate-800 mb-6">এআই এগ্রো-এনসাইক্লোপিডিয়া</h2>
-              <div className="flex flex-col md:flex-row gap-3">
-                 <div className="flex-1 relative">
-                    <input type="text" value={dictQuery} onChange={(e) => setDictQuery(e.target.value)} placeholder="যেমন: হাইড্রোপনিক্স, আইপিএম মেথড..." className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 pr-12 font-bold text-slate-700 outline-none focus:border-indigo-500" onKeyDown={(e) => e.key === 'Enter' && handleDictSearch()} />
-                    <button onClick={toggleListening} className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-50 text-slate-400 hover:text-indigo-600'}`}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></button>
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+    setIsLoading(true);
+    setResult(null);
+    stopSpeech();
+    try {
+      const data = await searchEncyclopedia(query, lang);
+      setResult(data);
+      if (data.text) playSpeech(data.text);
+    } catch (e) { alert("Search failed."); }
+    finally { setIsLoading(false); }
+  };
+
+  return (
+    <div className="bg-white rounded-[4rem] p-10 md:p-16 shadow-2xl border border-slate-100 animate-fade-in">
+       <div className="text-center mb-12">
+          <div className="w-20 h-20 bg-indigo-50 rounded-[2rem] flex items-center justify-center mx-auto text-4xl mb-6">📖</div>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight">কৃষি এনসাইক্লোপিডিয়া</h2>
+          <p className="text-slate-500 font-medium">যেকোনো কৃষি পরিভাষা বা পদ্ধতি সম্পর্কে বিস্তারিত জানুন।</p>
+       </div>
+
+       <div className="flex gap-3 mb-12">
+          <input 
+            type="text" 
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="যেমন: গ্রিনহাউস ইফেক্ট, টিএসপি সার, বালাই ব্যবস্থাপনা..."
+            className="flex-1 bg-slate-50 border-2 border-slate-100 rounded-[2rem] px-8 py-5 font-bold outline-none focus:border-indigo-500 transition-all shadow-inner"
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          />
+          <button onClick={handleSearch} disabled={isLoading} className="bg-indigo-600 text-white px-10 rounded-[2rem] font-black active:scale-95 transition-all shadow-xl">
+            {isLoading ? '...' : 'অনুসন্ধান'}
+          </button>
+       </div>
+
+       {isLoading && (
+         <div className="flex flex-col items-center justify-center py-20 opacity-50 space-y-4">
+            <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+            <p className="text-xs font-black uppercase tracking-widest text-indigo-700">Accessing Digital Archives...</p>
+         </div>
+       )}
+
+       {result && !isLoading && (
+         <div className="bg-slate-50 rounded-[3rem] p-10 border border-slate-100 relative animate-fade-in-up">
+            <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-200">
+               <h3 className="text-2xl font-black text-slate-800">ফলাফল: {query}</h3>
+               <button onClick={() => playSpeech(result.text)} className={`p-4 rounded-full shadow-lg ${isSpeaking ? 'bg-rose-500 text-white animate-pulse' : 'bg-indigo-600 text-white'}`}>
+                  {isSpeaking ? '🔇' : '🔊'}
+               </button>
+            </div>
+            <div className="prose prose-slate max-w-none text-slate-700 font-medium leading-[1.8] whitespace-pre-wrap text-lg first-letter:text-5xl first-letter:font-black first-letter:text-indigo-600 first-letter:float-left first-letter:mr-3">
+               {result.text}
+            </div>
+            {result.groundingChunks?.length > 0 && (
+              <div className="mt-12 pt-8 border-t border-slate-200">
+                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">যাচাইকৃত তথ্যসূত্র (Grounding)</p>
+                 <div className="flex flex-wrap gap-2">
+                    {result.groundingChunks.map((chunk, i) => chunk.web ? (
+                      <a key={i} href={chunk.web.uri} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 px-4 py-2 rounded-xl text-[10px] font-black text-indigo-600 hover:border-indigo-300 transition-all shadow-sm">
+                        {chunk.web.title}
+                      </a>
+                    ) : null)}
                  </div>
-                 <button onClick={handleDictSearch} disabled={isLoading} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black shadow-xl active:scale-95 disabled:bg-slate-300">ব্যাখ্যা করুন</button>
               </div>
-           </div>
-
-           {isLoading && (
-              <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[3rem] border border-slate-100 shadow-xl">
-                 <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                 <p className="mt-4 font-black text-slate-400 uppercase tracking-widest text-xs">AI Knowledge Engine Active...</p>
-              </div>
-           )}
-
-           {dictResult && !isLoading && (
-              <div className="bg-white rounded-[3.5rem] p-10 md:p-12 shadow-2xl border-t-[14px] border-indigo-600 animate-fade-in relative overflow-hidden flex flex-col">
-                 <div className="flex justify-between items-start mb-8 pb-6 border-b border-slate-100 relative z-10">
-                    <h3 className="text-3xl font-black text-slate-900 tracking-tighter">এনসাইক্লোপিডিয়া এন্ট্রি</h3>
-                    <div className="flex items-center space-x-2">
-                       <button onClick={() => playTTS()} className={`p-4 rounded-full shadow-lg ${isPlaying ? 'bg-rose-500 text-white animate-pulse' : 'bg-indigo-600 text-white'}`}>{isPlaying ? '🔊' : '🔈'}</button>
-                       <button onClick={()=>handleSave()} className="p-4 rounded-full bg-slate-900 text-white shadow-lg"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 5h14m-14 0v14l7-7 7 7V5m-14 0h14" /></svg></button>
-                    </div>
-                 </div>
-                 <div className="prose prose-indigo max-w-none text-slate-800 leading-[1.8] font-medium text-lg whitespace-pre-wrap first-letter:text-5xl first-letter:font-black first-letter:mr-3 first-letter:float-left first-letter:text-indigo-600">{dictResult.text}</div>
-              </div>
-           )}
-        </div>
-      )}
+            )}
+         </div>
+       )}
     </div>
   );
 };

@@ -1,17 +1,21 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { interpretSoilReportAI, generateSpeech, decodeBase64, decodeAudioData } from '../services/geminiService';
+import { SavedReport } from '../types';
 
 interface SoilGuideProps {
   onAction?: () => void;
   onShowFeedback?: () => void;
+  onBack?: () => void;
+  onSaveReport?: (report: Omit<SavedReport, 'id' | 'timestamp'>) => void;
 }
 
-const SoilGuide: React.FC<SoilGuideProps> = ({ onAction, onShowFeedback }) => {
+const SoilGuide: React.FC<SoilGuideProps> = ({ onAction, onShowFeedback, onBack, onSaveReport }) => {
   const [activeMode, setActiveMode] = useState<'guide' | 'interpret' | 'labs'>('guide');
   const [inputs, setInputs] = useState({ ph: '', n: '', p: '', k: '' });
   const [advice, setAdvice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isListeningField, setIsListeningField] = useState<string | null>(null);
 
@@ -94,6 +98,33 @@ const SoilGuide: React.FC<SoilGuideProps> = ({ onAction, onShowFeedback }) => {
     }
   };
 
+  const handleSaveReport = async () => {
+    if (advice && onSaveReport) {
+      setIsSaving(true);
+      try {
+        const audioBase64 = await generateSpeech(advice.replace(/[*#_~]/g, ''));
+        onSaveReport({
+          type: 'Soil Lab Analysis',
+          title: `মাটি পরীক্ষা রিপোর্ট - ${new Date().toLocaleDateString('bn-BD')}`,
+          content: advice,
+          audioBase64,
+          icon: '🚜'
+        });
+        alert("অডিওসহ রিপোর্টটি প্রোফাইলে সংরক্ষিত হয়েছে!");
+      } catch (e) {
+        onSaveReport({
+          type: 'Soil Lab Analysis',
+          title: `মাটি পরীক্ষা রিপোর্ট - ${new Date().toLocaleDateString('bn-BD')}`,
+          content: advice,
+          icon: '🚜'
+        });
+        alert("রিপোর্ট সংরক্ষিত হয়েছে!");
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+
   const playTTS = async (textOverride?: string) => {
     const textToSpeak = textOverride || advice;
     if (!textToSpeak) return;
@@ -139,7 +170,7 @@ const SoilGuide: React.FC<SoilGuideProps> = ({ onAction, onShowFeedback }) => {
   return (
     <div className="max-w-4xl mx-auto p-4 bg-slate-50 min-h-screen pb-32 font-sans">
       <div className="flex items-center space-x-4 mb-8">
-        <button onClick={() => { window.history.back(); stopTTS(); }} className="p-3 bg-white rounded-2xl shadow-sm border">
+        <button onClick={() => { onBack?.(); stopTTS(); }} className="p-3 bg-white rounded-2xl shadow-sm border">
           <svg className="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </button>
         <div>
@@ -191,9 +222,14 @@ const SoilGuide: React.FC<SoilGuideProps> = ({ onAction, onShowFeedback }) => {
             <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl animate-fade-in border-t-[12px] border-emerald-600">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="font-black text-xl text-slate-800">বিশেষজ্ঞ পরামর্শ</h3>
-                <button onClick={() => playTTS()} className={`p-4 rounded-full shadow-lg ${isPlaying ? 'bg-rose-500 text-white animate-pulse' : 'bg-emerald-600 text-white'}`}>
-                  {isPlaying ? '🔊' : '🔈'}
-                </button>
+                <div className="flex items-center space-x-2">
+                    <button onClick={() => playTTS()} className={`p-4 rounded-full shadow-lg ${isPlaying ? 'bg-rose-500 text-white animate-pulse' : 'bg-emerald-600 text-white'}`}>
+                    {isPlaying ? '🔊' : '🔈'}
+                    </button>
+                    <button onClick={handleSaveReport} disabled={isSaving} className="p-4 rounded-full bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all active:scale-90 disabled:opacity-50" title="সেভ করুন">
+                        {isSaving ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>}
+                    </button>
+                </div>
               </div>
               <div className="prose prose-slate max-w-none text-gray-700 font-medium leading-relaxed whitespace-pre-wrap">
                 {advice}

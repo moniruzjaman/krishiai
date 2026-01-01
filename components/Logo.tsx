@@ -7,6 +7,8 @@ interface LogoProps {
   textColor?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   variant?: 'default' | 'info';
+  // Fix: Added style property to allow passing CSS properties like 'color' to the root div
+  style?: React.CSSProperties;
 }
 
 export const Logo: React.FC<LogoProps> = ({ 
@@ -14,7 +16,9 @@ export const Logo: React.FC<LogoProps> = ({
   showText = false, 
   textColor = "text-white",
   size = 'md',
-  variant = 'default'
+  variant = 'default',
+  // Fix: Extracting style from props to apply it to the container div
+  style
 }) => {
   const sizeMap = {
     sm: 'w-6 h-6',
@@ -24,7 +28,8 @@ export const Logo: React.FC<LogoProps> = ({
   };
 
   return (
-    <div className={`flex items-center space-x-3 ${className}`}>
+    // Fix: Applying the style prop to the root div
+    <div className={`flex items-center space-x-3 ${className}`} style={style}>
       <div className={`${sizeMap[size]} relative flex-shrink-0`}>
         {/* Outer Glow/Circle */}
         <div className="absolute inset-0 bg-white/20 rounded-xl blur-sm transform rotate-6 scale-95"></div>

@@ -14,7 +14,12 @@ interface PyramidLevel {
   brixRange: string;
 }
 
-const PlantDefenseGuide: React.FC = () => {
+// Fix: Added missing onBack prop
+interface PlantDefenseGuideProps {
+  onBack?: () => void;
+}
+
+const PlantDefenseGuide: React.FC<PlantDefenseGuideProps> = ({ onBack }) => {
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
   const [brixValue, setBrixValue] = useState<number>(5);
 
@@ -90,7 +95,8 @@ const PlantDefenseGuide: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-4 bg-slate-50 min-h-screen pb-32 font-sans overflow-x-hidden">
       <div className="flex items-center space-x-4 mb-8">
-        <button onClick={() => window.history.back()} className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:bg-slate-50 transition-all active:scale-90 text-slate-400">
+        {/* Fix: Changed to use onBack prop */}
+        <button onClick={() => onBack?.()} className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:bg-slate-50 transition-all active:scale-90 text-slate-400">
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </button>
         <div>

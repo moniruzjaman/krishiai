@@ -3,11 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { getFieldMonitoringData, generateSpeech, decodeBase64, decodeAudioData } from '../services/geminiService';
 import { detectCurrentAEZDetails } from '../services/locationService';
 import { shareContent } from '../services/shareService';
+import { SavedReport } from '../types';
 import GuidedTour, { TourStep } from './GuidedTour';
 
 interface FieldMonitoringProps {
   onAction?: () => void;
   onShowFeedback?: () => void;
+  onBack?: () => void;
+  onSaveReport?: (report: Omit<SavedReport, 'id' | 'timestamp'>) => void;
 }
 
 const MONITORING_TOUR: TourStep[] = [
@@ -24,9 +27,10 @@ const MONITORING_TOUR: TourStep[] = [
   }
 ];
 
-const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedback }) => {
+const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedback, onBack, onSaveReport }) => {
   const [report, setReport] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [location, setLocation] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
@@ -34,7 +38,6 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
   const [shareToast, setShareToast] = useState(false);
   const [showTour, setShowTour] = useState(false);
 
-  // Simulated live metrics derived from monitoring
   const [metrics, setMetrics] = useState({
     moisture: 0,
     biomass: 0,
@@ -50,7 +53,6 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
     setIsLoading(true);
     setReport(null);
 
-    // Warm up AudioContext immediately
     const ctx = audioCtx || new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
     setAudioCtx(ctx);
     if (ctx.state === 'suspended') {
@@ -63,7 +65,6 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
       const data = await getFieldMonitoringData(aez.lat, aez.lng, aez.name);
       setReport(data.text);
       
-      // Immediate TTS playback initiation
       if (data.text) {
         playTTS(data.text);
       }
@@ -72,9 +73,9 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
       if (onShowFeedback) onShowFeedback();
 
       setMetrics({
-        moisture: Math.floor(Math.random() * 40) + 30, // 30-70%
-        biomass: Math.floor(Math.random() * 500) + 1200, // 1200-1700 kg/ha
-        ndvi: parseFloat((Math.random() * 0.4 + 0.3).toFixed(2)) // 0.3 - 0.7
+        moisture: Math.floor(Math.random() * 40) + 30,
+        biomass: Math.floor(Math.random() * 500) + 1200,
+        ndvi: parseFloat((Math.random() * 0.4 + 0.3).toFixed(2))
       });
       
     } catch (err) {
@@ -90,6 +91,33 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
     if (res.method === 'clipboard') {
       setShareToast(true);
       setTimeout(() => setShareToast(false), 2000);
+    }
+  };
+
+  const handleSaveReport = async () => {
+    if (report && onSaveReport) {
+      setIsSaving(true);
+      try {
+        const audioBase64 = await generateSpeech(report.replace(/[*#_~]/g, ''));
+        onSaveReport({
+          type: 'Field Monitoring',
+          title: `ক্ষেত পর্যবেক্ষণ - ${location?.name || 'লোকেশন'}`,
+          content: report,
+          audioBase64,
+          icon: '🛰️'
+        });
+        alert("অডিওসহ মনিটরিং রিপোর্ট সংরক্ষিত হয়েছে!");
+      } catch (e) {
+        onSaveReport({
+          type: 'Field Monitoring',
+          title: `ক্ষেত পর্যবেক্ষণ - ${location?.name || 'লোকেশন'}`,
+          content: report,
+          icon: '🛰️'
+        });
+        alert("রিপোর্ট সংরক্ষিত হয়েছে!");
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -141,7 +169,7 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
     <div className="max-w-4xl mx-auto p-4 pb-24 font-sans animate-fade-in min-h-screen">
       {showTour && <GuidedTour steps={MONITORING_TOUR} tourKey="monitoring" onClose={() => setShowTour(false)} />}
       <div className="flex items-center space-x-4 mb-8">
-        <button onClick={() => { window.history.back(); stopTTS(); }} className="p-3 bg-white rounded-2xl shadow-sm hover:bg-slate-100 transition-all">
+        <button onClick={() => { onBack?.(); stopTTS(); }} className="p-3 bg-white rounded-2xl shadow-sm hover:bg-slate-100 transition-all">
           <svg className="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </button>
         <h1 className="text-2xl font-black text-gray-800">ফিল্ড মনিটরিং পোর্টাল</h1>
@@ -193,6 +221,9 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
                     </button>
                     <button onClick={() => playTTS()} className={`p-5 rounded-full shadow-2xl transition-all ${isPlaying ? 'bg-rose-500 animate-pulse' : 'bg-white text-blue-600'}`}>
                        {isPlaying ? <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> : <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>}
+                    </button>
+                    <button onClick={handleSaveReport} disabled={isSaving} className="p-5 rounded-full bg-blue-600 text-white shadow-xl hover:bg-blue-700 transition-all active:scale-90 disabled:opacity-50" title="সেভ করুন">
+                       {isSaving ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>}
                     </button>
                  </div>
               </div>

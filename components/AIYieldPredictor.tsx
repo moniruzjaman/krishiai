@@ -3,15 +3,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import { detectCurrentAEZDetails } from '../services/locationService';
 import { getAIYieldPrediction, generateSpeech, decodeBase64, decodeAudioData } from '../services/geminiService';
 import { CROPS_BY_CATEGORY, CROP_CATEGORIES } from '../constants';
-import { User, SavedReport } from '../types';
+import { User, SavedReport, Language } from '../types';
 import ShareDialog from './ShareDialog';
 import GuidedTour, { TourStep } from './GuidedTour';
+import { ToolGuideHeader } from './ToolGuideHeader';
 
 interface AIYieldPredictorProps {
   user?: User;
   onAction?: (xp: number) => void;
   onSaveReport?: (report: Omit<SavedReport, 'id' | 'timestamp'>) => void;
   onShowFeedback?: () => void;
+  onBack?: () => void;
+  lang: Language;
 }
 
 interface DynamicField {
@@ -51,7 +54,7 @@ const yieldLoadingSteps = [
   "চূড়ান্ত ফলন পূর্বাভাস ও অপ্টিমাইজেশন রিপোর্ট তৈরি হচ্ছে..."
 ];
 
-const AIYieldPredictor: React.FC<AIYieldPredictorProps> = ({ user, onAction, onSaveReport, onShowFeedback }) => {
+const AIYieldPredictor: React.FC<AIYieldPredictorProps> = ({ user, onAction, onSaveReport, onShowFeedback, onBack, lang }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('cereals');
   const [crop, setCrop] = useState('ধান');
   const [aez, setAez] = useState('অঞ্চল নির্বাচন করুন');
@@ -71,7 +74,7 @@ const AIYieldPredictor: React.FC<AIYieldPredictorProps> = ({ user, onAction, onS
   const [isListening, setIsListening] = useState(false);
   const [activeListeningId, setActiveListeningId] = useState<string | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showTour, setShowTour] = useState(false);
 
   // Guide Step State
@@ -181,7 +184,6 @@ const AIYieldPredictor: React.FC<AIYieldPredictorProps> = ({ user, onAction, onS
     setIsLoading(true);
     setPrediction(null);
     setLoadingStep(0);
-    setIsSaved(false);
 
     if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
@@ -192,11 +194,10 @@ const AIYieldPredictor: React.FC<AIYieldPredictorProps> = ({ user, onAction, onS
 
     try {
       const res = await getAIYieldPrediction(
-        crop, aez, soilStatus, practice, water, notes, user?.progress.rank, dynamicInputs
+        crop, aez, soilStatus, practice, water, notes, user?.progress.rank, dynamicInputs, lang
       );
       setPrediction(res.text);
       
-      // Automatic Playback
       if (res.text) {
         playTTS(res.text);
       }
@@ -210,16 +211,30 @@ const AIYieldPredictor: React.FC<AIYieldPredictorProps> = ({ user, onAction, onS
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (prediction && onSaveReport) {
-      onSaveReport({
-        type: 'Yield Prediction',
-        title: `${crop} - ফলন পূর্বাভাস রিপোর্ট`,
-        content: prediction,
-        icon: '📈'
-      });
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 2500);
+      setIsSaving(true);
+      try {
+        const audioBase64 = await generateSpeech(prediction.replace(/[*#_~]/g, ''));
+        onSaveReport({
+          type: 'Yield Prediction',
+          title: `${crop} - ফলন পূর্বাভাস রিপোর্ট`,
+          content: prediction,
+          audioBase64,
+          icon: '📈'
+        });
+        alert("অডিওসহ রিপোর্টটি প্রোফাইলে সেভ হয়েছে!");
+      } catch (e) {
+        onSaveReport({
+          type: 'Yield Prediction',
+          title: `${crop} - ফলন পূর্বাভাস রিপোর্ট`,
+          content: prediction,
+          icon: '📈'
+        });
+        alert("রিপোর্ট সেভ হয়েছে (অডিও ফাইল ছাড়াই)");
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -300,15 +315,27 @@ const AIYieldPredictor: React.FC<AIYieldPredictorProps> = ({ user, onAction, onS
       {showTour && <GuidedTour steps={YIELD_TOUR} tourKey="yield" onClose={() => setShowTour(false)} />}
       {isShareOpen && <ShareDialog isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} title="ফলন পূর্বাভাস রিপোর্ট" content={prediction || ""} />}
       
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <button onClick={() => { window.history.back(); stopTTS(); }} className="p-3 bg-white rounded-2xl shadow-sm border hover:bg-slate-100 transition-all"><svg className="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-          <div>
-            <h1 className="text-3xl font-black text-slate-800 tracking-tight">এআই ফলন পূর্বাভাস</h1>
-            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1">Guided Yield Prediction Hub</p>
-          </div>
-        </div>
-      </div>
+      <ToolGuideHeader 
+        title={lang === 'bn' ? 'এআই ফলন পূর্বাভাস' : 'AI Yield Prediction'}
+        subtitle={lang === 'bn' ? 'আবহাওয়া, অঞ্চল এবং চাষ পদ্ধতির সমন্বয়ে আগাম ফলন ধারণা।' : 'Strategic harvest forecasting based on weather, AEZ, and management practices.'}
+        protocol="Strategic Agronomic Model 3.1"
+        source="AI Strategic Farming Intelligence"
+        lang={lang}
+        onBack={onBack || (() => {})}
+        icon="🔮"
+        themeColor="indigo"
+        guideSteps={lang === 'bn' ? [
+          "প্রথমে আপনার শস্যের বিভাগ এবং নাম নির্বাচন করুন।",
+          "জমির ধরণ, শস্যের জাত এবং বর্তমান বৃদ্ধির ধাপ (Stage) নিশ্চিত করুন।",
+          "চাষ পদ্ধতি (জৈব/সনাতন) এবং সেচ ব্যবস্থার তথ্য দিন।",
+          "এআই মডেল আপনার জন্য সম্ভাব্য ফলন এবং তা বাড়ানোর উপায় জানাবে।"
+        ] : [
+          "Select your crop category and specific crop name.",
+          "Specify land type, crop variety, and current growth stage.",
+          "Provide management details like farming practice and irrigation type.",
+          "The AI model will predict yield potential and improvement strategies."
+        ]}
+      />
 
       <ProgressSteps />
 
@@ -513,26 +540,20 @@ const AIYieldPredictor: React.FC<AIYieldPredictorProps> = ({ user, onAction, onS
                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em]">AI Strategic Yield Analysis</p>
                    </div>
                 </div>
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <button onClick={() => setIsShareOpen(true)} className="p-4 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all active:scale-90 shadow-xl border border-white/10" title="শেয়ার করুন">
+                <div className="flex items-center space-x-2">
+                   <button onClick={() => setIsShareOpen(true)} className="p-4 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all active:scale-90 shadow-xl border border-white/10" title="শেয়ার করুন">
                       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                    </button>
-                    <button onClick={() => playTTS()} className={`p-5 rounded-full shadow-2xl transition-all active:scale-90 ${isPlaying ? 'bg-rose-500 animate-pulse' : 'bg-white text-emerald-600'}`}>
-                       {isPlaying ? <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> : <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>}
-                    </button>
-                  </div>
-                  <button 
-                    onClick={handleSave} 
-                    className={`w-full py-3 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center space-x-2 border-b-4 shadow-xl ${isSaved ? 'bg-emerald-500 text-white border-emerald-700' : 'bg-white/10 hover:bg-white/20 text-white border-white/10'}`}
-                  >
-                     {isSaved ? <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 5h14m-14 0v14l7-7 7 7V5m-14 0h14" /></svg>}
-                     <span>{isSaved ? 'সংরক্ষিত!' : 'সেভ করুন'}</span>
-                  </button>
+                   </button>
+                   <button onClick={handleSave} disabled={isSaving} className="p-4 rounded-full bg-emerald-600 text-white shadow-xl hover:bg-emerald-700 transition-all active:scale-90 disabled:opacity-50">
+                      {isSaving ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 5h14m-14 0v14l7-7 7 7V5m-14 0h14" /></svg>}
+                   </button>
+                   <button onClick={() => playTTS()} className={`p-5 rounded-full shadow-2xl transition-all active:scale-90 ${isPlaying ? 'bg-rose-500 text-white animate-pulse' : 'bg-white text-emerald-600'}`}>
+                      {isPlaying ? <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> : <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>}
+                   </button>
                 </div>
               </div>
               
-              <div className="prose prose-invert max-w-none font-medium leading-[1.8] whitespace-pre-wrap text-slate-200 text-lg md:text-xl first-letter:text-6xl first-letter:font-black first-letter:text-emerald-500 first-letter:mr-3 first-letter:float-left first-letter:leading-none">
+              <div className="prose prose-invert max-w-none font-medium leading-[1.8] whitespace-pre-wrap text-slate-200 text-lg md:text-xl first-letter:text-6xl first-letter:font-black first-letter:text-emerald-500 first-letter:float-left first-letter:leading-none">
                 {prediction}
               </div>
             </div>
