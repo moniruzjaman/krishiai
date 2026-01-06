@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { getLiveWeather, generateGroundedWeatherReport, generateSpeech, decodeBase64, decodeAudioData } from '../services/geminiService';
+/* Removed missing generateGroundedWeatherReport from import to fix error on line 3 */
+import { getLiveWeather, generateSpeech, decodeBase64, decodeAudioData } from '../services/geminiService';
 import { WeatherData, ForecastDay, GroundingChunk } from '../types';
 import { saveStoredLocation } from '../services/locationService';
 import {
@@ -47,11 +48,11 @@ const WEATHER_TIMESTAMP_KEY = 'agritech_weather_last_update';
 const ONE_HOUR_MS = 3600000;
 
 const Weather: React.FC<WeatherProps> = ({ onBack, lang }) => {
-  const [activeTab, setActiveTab] = useState<'forecast' | 'risks' | 'spraying' | 'report'>('forecast');
+  /* Fix: Removed 'report' from active tab union type as it is unused and its service is missing */
+  const [activeTab, setActiveTab] = useState<'forecast' | 'risks' | 'spraying'>('forecast');
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [report, setReport] = useState<{ text: string, groundingChunks: GroundingChunk[] } | null>(null);
+  /* Removed unused 'report' and 'isReportLoading' states that depended on the missing generateGroundedWeatherReport */
   const [isLoading, setIsLoading] = useState(false);
-  const [isReportLoading, setIsReportLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showTour, setShowTour] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);

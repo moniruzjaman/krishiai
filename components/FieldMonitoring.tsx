@@ -27,9 +27,18 @@ const MONITORING_TOUR: TourStep[] = [
   }
 ];
 
+const monitoringLoadingSteps = [
+  "স্যাটেলাইট থেকে ল্যান্ডল্যাট (Landsat) ডাটা সংগ্রহ করা হচ্ছে...",
+  "আপনার প্লটের ক্লোরোফিল এবং নাইট্রোজেন ইনডেক্স বিশ্লেষণ চলছে...",
+  "NDVI এবং বায়োমাস প্রোফাইল ম্যাপিং করা হচ্ছে...",
+  "আঞ্চলিক আবহাওয়া ও মাটির আর্দ্রতা সমন্বয় করা হচ্ছে...",
+  "আপনার খামারের জন্য চূড়ান্ত ডিজিটাল অডিট রিপোর্ট প্রস্তুত হচ্ছে..."
+];
+
 const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedback, onBack, onSaveReport }) => {
   const [report, setReport] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [location, setLocation] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -49,9 +58,20 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
     if (!tourDone) setShowTour(true);
   }, []);
 
+  useEffect(() => {
+    let interval: any;
+    if (isLoading) {
+      interval = setInterval(() => {
+        setLoadingStep(prev => (prev + 1) % monitoringLoadingSteps.length);
+      }, 2500);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
   const startMonitoring = async () => {
     setIsLoading(true);
     setReport(null);
+    setLoadingStep(0);
 
     const ctx = audioCtx || new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
     setAudioCtx(ctx);
@@ -160,7 +180,7 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
   const stopTTS = () => {
     if (currentSource) {
       currentSource.stop();
-      setCurrentSource(null);
+      currentSource.null;
     }
     setIsPlaying(false);
   };
@@ -186,15 +206,18 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
           <button id="monitoring-start-btn" onClick={startMonitoring} className="bg-blue-600 text-white px-12 py-5 rounded-[2rem] font-black text-xl shadow-2xl active:scale-95 transition-all">মনিটরিং শুরু করুন</button>
         </div>
       ) : isLoading ? (
-        <div className="flex flex-col items-center justify-center py-32 space-y-8 bg-white rounded-[3rem] shadow-xl border">
+        <div className="flex flex-col items-center justify-center py-32 space-y-12 bg-white rounded-[3rem] shadow-xl border">
           <div className="relative">
-            <div className="w-24 h-24 border-4 border-blue-100 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center text-3xl">📡</div>
+            <div className="w-32 h-32 border-8 border-blue-100 rounded-full"></div>
+            <div className="absolute inset-0 border-8 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center text-5xl animate-bounce">🛰️</div>
           </div>
-          <div className="text-center">
-            <h3 className="text-xl font-black text-gray-800 mb-2">এরিয়াল ডাটা সংগ্রহ করা হচ্ছে...</h3>
-            <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">Grounding Current Location & AEZ Maps</p>
+          <div className="text-center space-y-4 px-8">
+            <h3 className="text-2xl font-black text-slate-800 transition-all duration-500">{monitoringLoadingSteps[loadingStep]}</h3>
+            <div className="w-full max-w-xs mx-auto h-2 bg-slate-100 rounded-full overflow-hidden">
+               <div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${((loadingStep + 1) / monitoringLoadingSteps.length) * 100}%` }}></div>
+            </div>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em]">Connecting to Orbital Agri-Analytics Engine</p>
           </div>
         </div>
       ) : (

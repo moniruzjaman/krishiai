@@ -22,10 +22,11 @@ const PERSONAS = [
 ];
 
 const thinkingMessages = [
-  "আপনার প্রশ্নের প্রেক্ষাপট বিশ্লেষণ করা হচ্ছে...",
-  "মাঠের অবস্থান ও ম্যাপ ডাটা যাচাই চলছে...",
-  "নিকটস্থ কৃষি উপকরণ বিক্রেতা এবং সরকারি অফিস খোঁজা হচ্ছে...",
-  "বিশেষজ্ঞ পরামর্শ এবং লোকেশন লিংক প্রস্তুত হচ্ছে..."
+  "আপনার প্রশ্নের প্রেক্ষাপট ও বৈজ্ঞানিক ভিত্তি বিশ্লেষণ করা হচ্ছে...",
+  "আপনার মাঠের ভৌগোলিক অবস্থান ও স্যাটেলাইট ম্যাপ ডাটা যাচাই চলছে...",
+  "নিকটস্থ ডিএই (DAE) অফিস ও উপকরণ বিক্রেতাদের লোকেশন শনাক্ত করা হচ্ছে...",
+  "BARC ও BARI এর সর্বশেষ নির্দেশিকা অনুযায়ী তথ্য সমন্বয় করা হচ্ছে...",
+  "আপনার জন্য বিশেষজ্ঞ পরামর্শ ও প্রয়োজনীয় ম্যাপ লিংক প্রস্তুত হচ্ছে..."
 ];
 
 const ChatBot: React.FC<ChatBotProps> = ({ user, userRank, userCrops = [], onAction, onShowFeedback, onBack }) => {
@@ -103,6 +104,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ user, userRank, userCrops = [], onAct
     setMessages(prev => [...prev, userMsg]);
     if (!customText) setInputText('');
     setIsLoading(true);
+    setLoadingStep(0);
 
     try {
       const history = messages.filter(m => !m.isError).map(m => ({ role: m.role, parts: [{ text: m.text }] }));
@@ -155,7 +157,17 @@ const ChatBot: React.FC<ChatBotProps> = ({ user, userRank, userCrops = [], onAct
             </div>
           </div>
         ))}
-        {isLoading && <div className="flex justify-start animate-pulse"><div className="bg-emerald-50 p-5 rounded-[2rem] rounded-bl-none max-w-[80%]"><p className="text-sm font-bold text-slate-700">{thinkingMessages[loadingStep]}</p></div></div>}
+        {isLoading && (
+          <div className="flex justify-start animate-fade-in">
+            <div className="bg-emerald-50 p-6 rounded-[2.5rem] rounded-bl-none max-w-[85%] shadow-sm border border-emerald-100">
+               <div className="flex items-center space-x-3 mb-3">
+                  <div className="w-6 h-6 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+                  <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">AI Agent Thinking...</span>
+               </div>
+               <p className="text-sm font-bold text-slate-700 transition-all duration-500">{thinkingMessages[loadingStep]}</p>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
