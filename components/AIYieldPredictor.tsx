@@ -313,7 +313,14 @@ const AIYieldPredictor: React.FC<AIYieldPredictorProps> = ({ user, onAction, onS
   return (
     <div className="max-w-5xl mx-auto p-4 bg-gray-50 min-h-screen font-sans pb-32 animate-fade-in">
       {showTour && <GuidedTour steps={YIELD_TOUR} tourKey="yield" onClose={() => setShowTour(false)} />}
-      {isShareOpen && <ShareDialog isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} title="ফলন পূর্বাভাস রিপোর্ট" content={prediction || ""} />}
+      {isShareOpen && prediction && (
+        <ShareDialog 
+          isOpen={isShareOpen} 
+          onClose={() => setIsShareOpen(false)} 
+          title={`Yield Prediction: ${crop}`} 
+          content={prediction} 
+        />
+      )}
       
       <ToolGuideHeader 
         title={lang === 'bn' ? 'এআই ফলন পূর্বাভাস' : 'AI Yield Prediction'}

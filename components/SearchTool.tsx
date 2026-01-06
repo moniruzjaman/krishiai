@@ -4,6 +4,7 @@ import { searchAgriculturalInfo, generateSpeech, decodeBase64, decodeAudioData }
 import { GroundingChunk, SavedReport } from '../types';
 import { COMMODITIES_DATA } from '../constants';
 import { Logo } from './Logo';
+import ShareDialog from './ShareDialog';
 
 interface SearchToolProps {
   onAction?: () => void;
@@ -42,6 +43,7 @@ const SearchTool: React.FC<SearchToolProps> = ({ onAction, onSaveReport, onShowF
   const [loadingStep, setLoadingStep] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   
   const recognitionRef = useRef<any>(null);
@@ -202,6 +204,15 @@ const SearchTool: React.FC<SearchToolProps> = ({ onAction, onSaveReport, onShowF
 
   return (
     <div className="max-w-4xl mx-auto p-4 pb-32 font-sans animate-fade-in bg-slate-50 min-h-screen">
+      {isShareOpen && results && (
+        <ShareDialog 
+          isOpen={isShareOpen} 
+          onClose={() => setIsShareOpen(false)} 
+          title={`Market Insight: ${query}`} 
+          content={results.text} 
+        />
+      )}
+
       <div className="bg-[#0A8A1F] -mx-4 -mt-4 p-8 text-white rounded-b-[3.5rem] shadow-xl mb-8 border-b-8 border-green-700/20">
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center space-x-3">
@@ -346,9 +357,11 @@ const SearchTool: React.FC<SearchToolProps> = ({ onAction, onSaveReport, onShowF
                       </div>
                    </div>
                    <div className="flex items-center space-x-2">
-                      <button onClick={handleSave} disabled={isSaving} className="p-4 rounded-2xl bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all active:scale-90 flex items-center space-x-2 disabled:opacity-50">
-                         {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 5h14m-14 0v14l7-7 7 7V5m-14 0h14" /></svg>}
-                         <span className="text-[10px] font-black uppercase">{isSaving ? 'সেভ হচ্ছে...' : 'সেভ (অডিওসহ)'}</span>
+                      <button onClick={() => setIsShareOpen(true)} className="p-5 rounded-full bg-white text-emerald-600 border border-emerald-100 shadow-xl hover:bg-emerald-50 transition-all active:scale-90">
+                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                      </button>
+                      <button onClick={handleSave} disabled={isSaving} className="p-5 rounded-full bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all active:scale-90 disabled:opacity-50">
+                         {isSaving ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 5h14m-14 0v14l7-7 7 7V5m-14 0h14" /></svg>}
                       </button>
                       <button onClick={() => playTTS()} className={`p-5 rounded-full shadow-2xl transition-all active:scale-90 ${isPlaying ? 'bg-rose-500 text-white animate-pulse' : 'bg-[#0A8A1F] text-white'}`}>
                         {isPlaying ? <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 9v6m4-6v6" /></svg> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>}

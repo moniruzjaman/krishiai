@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { getFieldMonitoringData, generateSpeech, decodeBase64, decodeAudioData } from '../services/geminiService';
 import { detectCurrentAEZDetails } from '../services/locationService';
-import { shareContent } from '../services/shareService';
 import { SavedReport } from '../types';
 import GuidedTour, { TourStep } from './GuidedTour';
+import ShareDialog from './ShareDialog';
 
 interface FieldMonitoringProps {
   onAction?: () => void;
@@ -44,7 +44,7 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
   const [currentSource, setCurrentSource] = useState<AudioBufferSourceNode | null>(null);
-  const [shareToast, setShareToast] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
 
   const [metrics, setMetrics] = useState({
@@ -102,15 +102,6 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
       alert("মনিটরিং ডাটা সংগ্রহ করতে সমস্যা হয়েছে।");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleShare = async () => {
-    if (!report) return;
-    const res = await shareContent("ফিল্ড মনিটরিং রিপোর্ট", report);
-    if (res.method === 'clipboard') {
-      setShareToast(true);
-      setTimeout(() => setShareToast(false), 2000);
     }
   };
 
@@ -188,6 +179,16 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
   return (
     <div className="max-w-4xl mx-auto p-4 pb-24 font-sans animate-fade-in min-h-screen">
       {showTour && <GuidedTour steps={MONITORING_TOUR} tourKey="monitoring" onClose={() => setShowTour(false)} />}
+      
+      {isShareOpen && report && (
+        <ShareDialog 
+          isOpen={isShareOpen} 
+          onClose={() => setIsShareOpen(false)} 
+          title={`Field Monitoring: ${location?.name || 'Locality'}`} 
+          content={report} 
+        />
+      )}
+
       <div className="flex items-center space-x-4 mb-8">
         <button onClick={() => { onBack?.(); stopTTS(); }} className="p-3 bg-white rounded-2xl shadow-sm hover:bg-slate-100 transition-all">
           <svg className="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -239,7 +240,7 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
                     </div>
                  </div>
                  <div className="flex items-center space-x-2">
-                    <button onClick={handleShare} className="p-5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all active:scale-90" title="শেয়ার করুন">
+                    <button onClick={() => setIsShareOpen(true)} className="p-5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all active:scale-90" title="শেয়ার করুন">
                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
                     </button>
                     <button onClick={() => playTTS()} className={`p-5 rounded-full shadow-2xl transition-all ${isPlaying ? 'bg-rose-500 animate-pulse' : 'bg-white text-blue-600'}`}>
@@ -256,7 +257,6 @@ const FieldMonitoring: React.FC<FieldMonitoringProps> = ({ onAction, onShowFeedb
            </div>
         </div>
       )}
-      {shareToast && <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl font-black text-[10px] animate-fade-in z-[200]">📋 কপি করা হয়েছে!</div>}
     </div>
   );
 };

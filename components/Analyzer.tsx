@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { analyzeCropImage, generateSpeech, requestPrecisionParameters, performDeepAudit, getLiveWeather } from '../services/geminiService';
 import { getStoredLocation } from '../services/locationService';
@@ -130,20 +129,15 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
       setSelectedMedia(dataUrl);
       setMimeType('image/jpeg');
       stopLiveMode();
-      handleAnalyze(isDeepAudit);
+      handleAnalyze(isDeepAudit, dataUrl);
     }
   };
 
-  const handleAnalyze = async (precision: boolean = false) => {
-    // If called from captureFrame, media might already be set in local var but state not flushed yet
-    // To handle that, handleAnalyze is modified to take dataURL if provided directly
-    // But for simplicity, we'll rely on the state-based logic which works fine after a short delay or sync
-    
-    // Check if we need to wait for state
-    const mediaToAnalyze = selectedMedia;
-    const typeToAnalyze = mimeType;
+  const handleAnalyze = async (precision: boolean = false, dataUrlOverride?: string) => {
+    const mediaToAnalyze = dataUrlOverride || selectedMedia;
+    const typeToAnalyze = dataUrlOverride ? 'image/jpeg' : mimeType;
 
-    if (!mediaToAnalyze) return;
+    if (!mediaToAnalyze && !isLiveMode) return;
 
     setIsLoading(true); 
     setResult(null); 
@@ -151,7 +145,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
     setLoadingStep(0);
     
     try {
-      const base64 = mediaToAnalyze.split(',')[1];
+      const base64 = (mediaToAnalyze || '').split(',')[1];
       
       if (precision) {
         const fields = await requestPrecisionParameters(base64, typeToAnalyze, cropFamily, lang);
@@ -227,6 +221,15 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
     <div className="max-w-4xl mx-auto p-4 pb-32 animate-fade-in font-sans">
       {showTour && <GuidedTour steps={ANALYZER_TOUR} tourKey="analyzer_v5" onClose={() => setShowTour(false)} />}
       
+      {isShareOpen && result && (
+        <ShareDialog 
+          isOpen={isShareOpen} 
+          onClose={() => setIsShareOpen(false)} 
+          title={`Scientific Audit: ${result.diagnosis}`} 
+          content={result.fullText} 
+        />
+      )}
+
       <ToolGuideHeader 
         title={lang === 'bn' ? 'অফিসিয়াল সায়েন্টিফিক অডিট' : 'Official Scientific Audit'}
         subtitle={lang === 'bn' ? 'পোকা, রোগ ও পুষ্টির অভাব শনাক্তকরণ এবং বিএআরআই/বিআরআরআই প্রটোকল ভিত্তিক প্রতিকার।' : 'Identify pests, diseases, and deficiencies with official BARI/BRRI protocols.'}
@@ -271,50 +274,35 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
                   <div className="w-full h-full rounded-[2.5rem] overflow-hidden border-4 border-emerald-50 shadow-2xl relative bg-black">
                      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                      
-                     {/* Scientific HUD Overlays */}
+                     {/* Immersive HUD Overlays */}
                      <div className="absolute inset-0 pointer-events-none">
-                        {/* Scanning Line */}
-                        <div className="absolute left-0 w-full h-1 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.8)] animate-scanning-line z-10"></div>
+                        {/* Animated Scanning Line */}
+                        <div className="absolute left-0 w-full h-0.5 bg-emerald-500 shadow-[0_0_15px_#10b981] animate-scanning-line z-10"></div>
                         
                         {/* Viewfinder corners */}
-                        <div className="absolute top-8 left-8 w-12 h-12 border-t-4 border-l-4 border-emerald-500 opacity-60"></div>
-                        <div className="absolute top-8 right-8 w-12 h-12 border-t-4 border-r-4 border-emerald-500 opacity-60"></div>
-                        <div className="absolute bottom-8 left-8 w-12 h-12 border-b-4 border-l-4 border-emerald-500 opacity-60"></div>
-                        <div className="absolute bottom-8 right-8 w-12 h-12 border-b-4 border-r-4 border-emerald-500 opacity-60"></div>
+                        <div className="absolute top-8 left-8 w-10 h-10 border-t-2 border-l-2 border-emerald-500/60 rounded-tl-xl"></div>
+                        <div className="absolute top-8 right-8 w-10 h-10 border-t-2 border-r-2 border-emerald-500/60 rounded-tr-xl"></div>
+                        <div className="absolute bottom-8 left-8 w-10 h-10 border-b-2 border-l-2 border-emerald-500/60 rounded-bl-xl"></div>
+                        <div className="absolute bottom-8 right-8 w-10 h-10 border-b-2 border-r-2 border-emerald-500/60 rounded-br-xl"></div>
 
-                        {/* Central HUD */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                           <div className="w-48 h-48 border-2 border-emerald-500/20 rounded-full flex items-center justify-center">
-                              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
-                           </div>
+                        {/* Telemetry labels */}
+                        <div className="absolute top-10 left-10 space-y-2 opacity-60">
+                           <div className="bg-black/40 px-2 py-0.5 rounded text-[8px] font-black text-white uppercase">MODE: AI_SCAN_V2</div>
+                           <div className="bg-black/40 px-2 py-0.5 rounded text-[8px] font-black text-white uppercase tracking-widest">ISO: 400</div>
                         </div>
 
-                        {/* Meta Data Sidebar */}
-                        <div className="absolute top-10 left-10 space-y-4">
-                           <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">
-                              <p className="text-[7px] font-black text-emerald-400 uppercase tracking-widest mb-0.5">Imaging</p>
-                              <p className="text-[10px] font-black text-white">PathoScan v5.2</p>
+                        {/* Center Target */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                           <div className="w-40 h-40 border-2 border-emerald-500/50 rounded-full flex items-center justify-center">
+                              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
                            </div>
-                           <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">
-                              <p className="text-[7px] font-black text-blue-400 uppercase tracking-widest mb-0.5">Spectrum</p>
-                              <p className="text-[10px] font-black text-white">NDVI Analysis</p>
-                           </div>
-                        </div>
-
-                        {/* Status Label */}
-                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-emerald-600/20 backdrop-blur-xl px-6 py-2 rounded-full border border-emerald-500/40">
-                           <p className="text-[9px] font-black text-white uppercase tracking-[0.3em] flex items-center">
-                             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
-                             Live Scientific Stream
-                           </p>
                         </div>
                      </div>
 
-                     {/* Flash Effect */}
                      {showFlash && <div className="absolute inset-0 bg-white z-[100] animate-camera-flash"></div>}
 
                      <div className="absolute bottom-6 left-0 right-0 flex justify-center space-x-4 px-6 z-30">
-                        <button onClick={() => captureFrame(true)} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black text-xs uppercase shadow-xl active:scale-95 transition-all border-b-4 border-emerald-800">সায়েন্টিফিক স্ক্যান</button>
+                        <button onClick={() => captureFrame(true)} className="flex-[2] bg-emerald-600 text-white py-4 rounded-2xl font-black text-xs uppercase shadow-xl active:scale-95 transition-all border-b-4 border-emerald-800">সায়েন্টিফিক স্ক্যান</button>
                         <button onClick={() => captureFrame(false)} className="flex-1 bg-white text-slate-900 py-4 rounded-2xl font-black text-xs uppercase shadow-xl active:scale-95 transition-all">দ্রুত ফটো</button>
                         <button onClick={stopLiveMode} className="p-4 bg-red-600 text-white rounded-2xl shadow-xl active:scale-95">✕</button>
                      </div>
@@ -398,15 +386,10 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
 
       {result && !isLoading && (
         <div className="space-y-8 animate-fade-in-up">
-          {/* Certificate Style Container */}
           <div ref={reportRef} className="bg-white rounded-none border-[12px] border-slate-900 p-8 md:p-14 shadow-2xl relative overflow-hidden flex flex-col print:shadow-none print:border-[5px]">
-             
-             {/* Authentic Watermark */}
              <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none rotate-12 select-none text-[8rem] font-black uppercase whitespace-nowrap overflow-hidden">
                 Govt Verified Protocol
              </div>
-
-             {/* Header with Seal */}
              <div className="flex flex-col md:flex-row justify-between items-start border-b-4 border-slate-900 pb-10 mb-10 gap-8 relative z-10">
                 <div className="flex items-center space-x-6">
                    <div className="w-24 h-24 bg-slate-900 text-white rounded-full flex flex-col items-center justify-center border-4 border-white shadow-xl rotate-12">
@@ -424,14 +407,15 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
                 </div>
                 <div className="flex flex-col items-end gap-2 print:hidden">
                    <div className="flex space-x-2">
+                     <button onClick={() => setIsShareOpen(true)} className="p-4 rounded-2xl bg-white text-emerald-600 shadow-xl hover:bg-emerald-50 transition-all active:scale-95 border border-emerald-100" title="শেয়ার করুন">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                     </button>
                      <button onClick={() => playSpeech(result.fullText)} className={`p-4 rounded-2xl shadow-xl transition-all ${isSpeaking ? 'bg-rose-500 text-white animate-pulse' : 'bg-slate-100 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600'}`}>🔊</button>
                      <button onClick={handleSaveToHistory} disabled={isSaving} className="p-4 rounded-2xl bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50">💾</button>
                    </div>
                    <span className="text-[9px] font-black text-slate-400 uppercase">Timestamp: {new Date().toLocaleString('bn-BD')}</span>
                 </div>
              </div>
-
-             {/* Main Content Grid */}
              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10">
                 <div className="lg:col-span-7 space-y-10">
                    <section>
@@ -446,7 +430,6 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
                         {result.fullText.split('MANAGEMENT')[0].replace(/DIAGNOSIS:|CATEGORY:|CONFIDENCE:|AUTHENTIC SOURCE:/g, '').trim()}
                       </p>
                    </section>
-
                    {result.groundingChunks && result.groundingChunks.length > 0 && (
                      <section className="bg-blue-50/50 p-8 rounded-[3rem] border-2 border-blue-100">
                         <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-6">অফিসিয়াল তথ্যসূত্র যাচাই (Grounding Verification)</h4>
@@ -464,7 +447,6 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
                      </section>
                    )}
                 </div>
-
                 <div className="lg:col-span-5 space-y-8">
                    {selectedMedia && (
                       <div className="rounded-[2rem] overflow-hidden border-4 border-slate-100 shadow-2xl relative grayscale-[0.2] hover:grayscale-0 transition-all duration-700">
@@ -472,7 +454,6 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
                          <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg text-[8px] font-black text-white uppercase tracking-widest">Specimen ID: #{(Math.random() * 9999).toFixed(0)}</div>
                       </div>
                    )}
-
                    <section className="bg-slate-900 rounded-[3rem] p-8 text-white relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl"></div>
                       <h4 className="text-lg font-black mb-6 flex items-center text-emerald-400">
@@ -489,18 +470,8 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
                          <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-xl">📋</div>
                       </div>
                    </section>
-
-                   <div className="p-8 border-4 border-dashed border-slate-100 rounded-[3rem] text-center">
-                      <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Scientific Approval</h5>
-                      <div className="flex flex-col items-center">
-                         <div className="text-3xl mb-2 opacity-30">✍️</div>
-                         <p className="font-black text-slate-300 uppercase text-[10px] tracking-[0.4em]">Krishi AI Digital Seal</p>
-                      </div>
-                   </div>
                 </div>
              </div>
-
-             {/* Footer Legal Disclaimer */}
              <div className="mt-16 pt-8 border-t border-slate-100 text-center">
                 <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em] leading-relaxed max-w-2xl mx-auto">
                   এই অডিট রিপোর্টটি বাংলাদেশ সরকারের ডিএই (DAE), বিএআরআই (BARI) এবং বিআরআরআই (BRRI) এর সায়েন্টিফিক প্রটোকল অনুসরণ করে এআই দ্বারা তৈরি। রাসায়নিক প্রয়োগের আগে অবশ্যই নিকটস্থ উপ-সহকারী কৃষি কর্মকর্তার পরামর্শ নিন।
