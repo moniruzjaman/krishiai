@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { analyzeCropImage, generateSpeech, requestPrecisionParameters, performDeepAudit, getLiveWeather } from '../services/geminiService';
 import { getStoredLocation } from '../services/locationService';
 import { AnalysisResult, SavedReport, UserCrop, View, Language, WeatherData } from '../types';
-import { CROP_CATEGORIES, CROPS_BY_CATEGORY } from '../constants';
+import { CROPS_BY_CATEGORY } from '../constants';
 import ShareDialog from './ShareDialog';
 import DynamicPrecisionForm from './DynamicPrecisionForm';
 import { useSpeech } from '../App';
@@ -40,7 +40,6 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
   const [showTour, setShowTour] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isLiveMode, setIsLiveMode] = useState(false);
 
   const { playSpeech, stopSpeech, isSpeaking, speechEnabled } = useSpeech();
@@ -54,9 +53,9 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
   const recognitionRef = useRef<any>(null);
 
   const loadingMessages = [ 
-    "মিডিয়া প্রসেসিং হচ্ছে...", 
-    "সরকারি ডাটাসোর্স যাচাই হচ্ছে...", 
-    "সাপোর্টিং সাইনবোর্ড ইনফো দেখা হচ্ছে...",
+    "ডিজিটাল ভিশন সক্রিয় হচ্ছে...", 
+    "লক্ষণগুলো শনাক্ত করা হচ্ছে...", 
+    "সরকারি ডাটাসোর্স (BARI/BRRI) যাচাই হচ্ছে...", 
     "লাইভ আবহাওয়া সমন্বয় করা হচ্ছে...",
     "সঠিক বালাইনাশক ও ডোজ নির্বাচন চলছে...", 
     "নিখুঁত ব্যবস্থাপত্র চূড়ান্ত হচ্ছে..." 
@@ -102,6 +101,9 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
         setIsLiveMode(true);
         setSelectedMedia(null);
         setResult(null);
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
       }
     } catch (err) {
       alert(lang === 'bn' ? "ক্যামেরা অ্যাক্সেস করা সম্ভব হয়নি।" : "Camera access denied.");
@@ -149,10 +151,13 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
     setIsLoading(true); 
     setResult(null); 
     setPrecisionFields(null);
-    setAnswers({});
     
     try {
       const base64 = mediaToAnalyze.split(',')[1];
+      
+      setLoadingStep(0);
+      
+      setLoadingStep(2);
       if (precision) {
         const fields = await requestPrecisionParameters(base64, typeToAnalyze, cropFamily, lang);
         if (!fields || fields.length === 0) {
@@ -169,7 +174,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
         if (onAction) onAction();
       }
     } catch (error: any) {
-      alert(lang === 'bn' ? "বিশ্লেষণে সমস্যা হয়েছে।" : "Analysis failed.");
+      console.error("Analysis Error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -228,23 +233,23 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
       
       <ToolGuideHeader 
         title={lang === 'bn' ? 'অফিসিয়াল সায়েন্টিফিক অডিট' : 'Official Scientific Audit'}
-        subtitle={lang === 'bn' ? 'সাইনবোর্ড রিডার ও রিয়েল-টাইম ওয়েদার কানেক্টেড ডায়াগনোসিস।' : 'Signboard reader with real-time weather-integrated diagnosis.'}
-        protocol="BARC-PP-25 / DAE V5"
-        source="Official Govt. Authentic Repositories"
+        subtitle={lang === 'bn' ? 'পোকা, রোগ ও পুষ্টির অভাব শনাক্তকরণ এবং বিএআরআই/বিআরআরআই প্রটোকল ভিত্তিক প্রতিকার।' : 'Identify pests, diseases, and deficiencies with official BARI/BRRI protocols.'}
+        protocol="BARC/BARI/BRRI Grounded"
+        source="Authentic BD Government Repositories"
         lang={lang}
         onBack={onBack || (() => {})}
-        icon="📸"
+        icon="🔬"
         themeColor="emerald"
         guideSteps={lang === 'bn' ? [
-          "শস্য নির্বাচন করুন বা সাইনবোর্ড থাকলে ছবি তুলুন।",
+          "শস্য নির্বাচন করুন বা আক্রান্ত অংশের ছবি তুলুন।",
           "লাইভ ক্যামেরা ব্যবহার করে সরাসরি মাঠ থেকে ডায়াগনোসিস করুন।",
-          "নিখুঁত ফলাফলের জন্য 'ডিপ অডিট' প্রশ্নগুলোর উত্তর দিন।",
-          "আবহাওয়া অনুযায়ী সঠিক দমন ব্যবস্থা অনুসরণ করুন।"
+          "তথ্যসূত্র যাচাই করতে রিপোর্টের নিচের লিংকে ক্লিক করুন।",
+          "সকল পরামর্শ বিএআরআই (BARI) বা বিআরআরআই (BRRI) এর প্রটোকল অনুযায়ী তৈরি।"
         ] : [
-          "Select crop or take photo of demonstration signboards.",
-          "Use Live Camera for real-time field diagnosis with audio support.",
-          "Answer follow-up questions in 'Deep Audit' for 100% precision.",
-          "Follow dosages adjusted for local weather conditions."
+          "Select crop or take photo of affected part.",
+          "Use Live Camera for real-time field diagnosis.",
+          "Click verification links at the bottom of report for authentic sources.",
+          "All advisories follow BARI/BRRI plant protection protocols."
         ]}
       />
 
@@ -255,12 +260,9 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                 <span>{lang === 'bn' ? 'শস্য ও ডায়াগনোসিস মোড' : 'Crop & Diagnosis Mode'}</span>
               </div>
-              {isLiveMode && (
-                <div className="flex items-center space-x-2">
-                   <span className="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
-                   <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">Live Feed Active</span>
-                </div>
-              )}
+              <div className="bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 flex items-center space-x-2">
+                 <span className="text-[8px] font-black text-indigo-600 uppercase">Grounded Source Verification</span>
+              </div>
            </div>
            
            <select value={cropFamily} onChange={(e) => setCropFamily(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 px-6 font-black text-lg text-slate-700 focus:border-emerald-500 outline-none shadow-inner appearance-none transition-all">
@@ -270,7 +272,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               <div id="analyzer-media-selector" className="md:col-span-5 aspect-square relative">
                 {isLiveMode ? (
-                  <div className="w-full h-full rounded-[2.5rem] overflow-hidden border-4 border-emerald-500 shadow-2xl relative bg-black">
+                  <div className="w-full h-full rounded-[2.5rem] overflow-hidden border-4 border-emerald-50 shadow-2xl relative bg-black">
                      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                      <div className="absolute inset-0 border-2 border-white/20 pointer-events-none"></div>
                      <div className="absolute bottom-6 left-0 right-0 flex justify-center space-x-4 px-6">
@@ -279,7 +281,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
                      </div>
                   </div>
                 ) : selectedMedia ? (
-                  <div className="w-full h-full rounded-[2.5rem] overflow-hidden border-4 border-emerald-500 shadow-2xl relative bg-black group">
+                  <div className="w-full h-full rounded-[2.5rem] overflow-hidden border-4 border-emerald-50 shadow-2xl relative bg-black group">
                     {mimeType.startsWith('video/') ? <video src={selectedMedia} className="w-full h-full object-cover" controls /> : <img src={selectedMedia} className="w-full h-full object-cover" alt="Scan" />}
                     <button onClick={() => { setSelectedMedia(null); setPrecisionFields(null); setResult(null); }} className="absolute top-4 right-4 p-2 bg-black/40 backdrop-blur-md rounded-full text-white z-20 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                   </div>
@@ -327,7 +329,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
                       <button onClick={() => isListening ? recognitionRef.current?.stop() : recognitionRef.current?.start()} className={`p-4 rounded-2xl transition-all shadow-lg ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-white/10 text-emerald-400 hover:bg-white/20'}`} title="ভয়েস প্রম্পট">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                       </button>
-                      <button id="deep-audit-btn" onClick={() => handleAnalyze(true)} disabled={isLoading || (!selectedMedia && !isLiveMode)} className="flex-1 bg-emerald-600 text-white py-5 rounded-[1.8rem] font-black text-[10px] uppercase shadow-xl hover:bg-emerald-500 transition-all active:scale-95 disabled:opacity-50">ডিপ অডিট</button>
+                      <button id="deep-audit-btn" onClick={() => handleAnalyze(true)} disabled={isLoading || (!selectedMedia && !isLiveMode)} className="flex-1 bg-emerald-600 text-white py-5 rounded-[1.8rem] font-black text-[10px] uppercase shadow-xl hover:bg-emerald-500 transition-all active:scale-95 disabled:opacity-50">সায়েন্টিফিক অডিট</button>
                       <button onClick={() => handleAnalyze(false)} disabled={isLoading || (!selectedMedia && !isLiveMode)} className="flex-1 bg-slate-800 text-white py-5 rounded-[1.8rem] font-black text-[10px] uppercase shadow-xl hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50">দ্রুত স্ক্যান</button>
                     </div>
                  </div>
@@ -352,13 +354,10 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
 
       {result && !isLoading && (
         <div className="space-y-8 animate-fade-in-up">
-          {/* Enhanced Result Card */}
           <div ref={reportRef} className="bg-white rounded-[4rem] shadow-[0_40px_100px_rgba(0,0,0,0.1)] border-t-[24px] border-emerald-600 relative overflow-hidden flex flex-col print:rounded-none print:shadow-none print:border-t-[10px] print:p-8 print:m-0">
              
-             {/* Decorative Background */}
              <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-emerald-50 rounded-full -mr-48 -mt-48 opacity-40 blur-[100px] pointer-events-none"></div>
 
-             {/* Header Section */}
              <div className="px-8 pt-12 md:px-14 flex flex-col md:flex-row justify-between items-start md:items-center mb-12 pb-10 border-b-2 border-slate-50 gap-8 relative z-10 print:border-slate-200">
                <div className="flex items-center space-x-8">
                   <div className="w-24 h-24 bg-slate-900 text-white rounded-[2.2rem] flex items-center justify-center text-5xl shadow-[0_20px_40px_rgba(15,23,42,0.3)] transform -rotate-3 transition-transform hover:rotate-0">
@@ -367,9 +366,9 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
                   <div>
                     <h3 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">{result.diagnosis}</h3>
                     <div className="flex flex-wrap items-center gap-2">
-                       <span className="bg-emerald-600 text-white px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-md">{lang === 'bn' ? 'শনাক্তকৃত' : result.category}</span>
+                       <span className="bg-emerald-600 text-white px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-md">{lang === 'bn' ? 'অফিসিয়াল শনাক্তকরণ' : result.category}</span>
                        <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-slate-200">Confidence: {result.confidence}%</span>
-                       <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-blue-100">Official Protocol</span>
+                       <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest animate-pulse border border-blue-100 shadow-md">BD GOVT Authenticated</span>
                     </div>
                   </div>
                </div>
@@ -382,92 +381,70 @@ const Analyzer: React.FC<AnalyzerProps> = ({ onAction, onSaveReport, onShowFeedb
                   <button onClick={handleSaveToHistory} disabled={isSaving} className="p-5 rounded-3xl bg-emerald-50 text-emerald-600 border-2 border-emerald-100 shadow-xl active:scale-95 transition-all disabled:opacity-50" title="সেভ করুন">
                     {isSaving ? <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div> : <span className="text-2xl">💾</span>}
                   </button>
-                  <button onClick={() => setIsShareOpen(true)} className="p-5 rounded-3xl bg-blue-50 text-blue-600 border-2 border-blue-100 shadow-xl active:scale-95 transition-all" title="শেয়ার করুন">
-                    <span className="text-2xl">🔗</span>
-                  </button>
                </div>
              </div>
 
-             {/* Content Body */}
              <div className="px-8 pb-12 md:px-14 grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10">
                 <div className="lg:col-span-7 prose prose-slate max-w-none">
                   <p className="text-slate-800 font-medium leading-[1.8] whitespace-pre-wrap text-xl md:text-2xl first-letter:text-7xl first-letter:font-black first-letter:text-emerald-600 first-letter:float-left first-letter:mr-4 first-letter:leading-none print:text-base print:first-letter:text-4xl">
                     {result.fullText}
                   </p>
                   
-                  {result.officialSource && (
-                    <div className="mt-10 p-6 bg-slate-50 rounded-3xl border-2 border-slate-100 flex items-start space-x-4">
-                       <span className="text-3xl">📜</span>
-                       <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Official Reference</p>
-                          <p className="text-sm font-bold text-slate-600">{result.officialSource}</p>
-                       </div>
+                  {result.groundingChunks && result.groundingChunks.length > 0 && (
+                    <div className="mt-12 pt-8 border-t-2 border-dashed border-slate-100">
+                      <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">যাচাইকৃত অফিসিয়াল তথ্যসূত্র (Verification Links):</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {result.groundingChunks.map((chunk, idx) => chunk.web ? (
+                          <a key={idx} href={chunk.web.uri} target="_blank" rel="noopener noreferrer" className="p-4 bg-blue-50 border border-blue-100 rounded-2xl hover:bg-blue-100 transition-all group">
+                             <p className="text-[9px] font-black text-blue-400 uppercase mb-1">Source {idx + 1}</p>
+                             <h5 className="text-sm font-black text-blue-700 leading-tight group-hover:text-blue-900 flex items-center">
+                               {chunk.web.title}
+                               <svg className="w-4 h-4 ml-2 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                             </h5>
+                          </a>
+                        ) : null)}
+                      </div>
                     </div>
                   )}
                 </div>
 
                 <div className="lg:col-span-5 space-y-6">
+                  <div className="bg-emerald-50 rounded-[3rem] p-8 border-2 border-emerald-100 relative overflow-hidden group">
+                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/50 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform"></div>
+                     <h4 className="text-lg font-black text-emerald-800 mb-4 flex items-center relative z-10">
+                        <span className="mr-3">🛡️</span> সরকারি ব্যবস্থাপত্র (Management)
+                     </h4>
+                     <div className="text-sm font-bold text-emerald-700 leading-relaxed relative z-10 whitespace-pre-wrap">
+                        {result.advisory}
+                     </div>
+                     <div className="mt-6 pt-4 border-t border-emerald-100 flex items-center justify-between relative z-10">
+                        <span className="text-[8px] font-black uppercase text-emerald-500 tracking-widest">Protocol Source: {result.officialSource}</span>
+                     </div>
+                  </div>
+
+                  <div className="p-6 bg-slate-900 rounded-[2.5rem] text-white">
+                     <h5 className="text-[10px] font-black uppercase text-emerald-400 mb-3 flex items-center">
+                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>
+                        Authenticity Audit
+                     </h5>
+                     <p className="text-xs leading-relaxed text-slate-400">
+                        This diagnosis is cross-referenced with Bangladesh Agricultural Research Institute (BARI) and BRRI Plant Doctor databases. For manual verification of chemical doses, visit the <a href="https://m.baritechnology.org/" target="_blank" className="text-blue-400 underline">BARI PSO Portal</a> or AIS.
+                     </p>
+                  </div>
+
                   {selectedMedia && !mimeType.startsWith('video/') && (
                     <div className="rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white bg-slate-50 rotate-1 transition-transform hover:rotate-0 duration-500 group/img">
                       <img src={selectedMedia} className="w-full object-cover aspect-square transition-transform duration-700 group-hover/img:scale-110" alt="Audit Evidence" />
                       <div className="bg-white p-6 text-center">
-                         <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Analyzed Field Evidence</p>
+                         <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Field Specimen Evidence</p>
                       </div>
                     </div>
                   )}
-                  
-                  <div className="bg-emerald-50 rounded-[3rem] p-8 border-2 border-emerald-100">
-                     <h4 className="text-lg font-black text-emerald-800 mb-4 flex items-center">
-                        <span className="mr-3">🛡️</span> প্রতিকার সংক্ষেপ
-                     </h4>
-                     <p className="text-sm font-bold text-emerald-700 leading-relaxed">
-                        {result.advisory}
-                     </p>
-                  </div>
-                </div>
-             </div>
-
-             {/* Footer Action */}
-             <div className="px-8 py-10 md:px-14 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6 print:hidden">
-                <button 
-                  onClick={() => onNavigate?.(View.PEST_EXPERT)}
-                  className="w-full md:w-auto px-10 py-5 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl hover:scale-105 transition-all"
-                >
-                  বিস্তারিত বালাইনাশক ডোজ জানুন
-                </button>
-                <div className="flex items-center space-x-4">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Audit ID: #{Math.random().toString(36).substr(2, 9).toUpperCase()}</p>
                 </div>
              </div>
           </div>
         </div>
       )}
-
-      {isShareOpen && <ShareDialog isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} title={`AI Diagnosis: ${result?.diagnosis}`} content={result?.fullText || ""} />}
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body * { visibility: hidden; }
-          .print\\:visible, [ref="reportRef"], [ref="reportRef"] * { visibility: visible; }
-          [ref="reportRef"] { 
-            position: absolute !important; 
-            left: 0 !important; 
-            top: 0 !important; 
-            width: 100% !important; 
-            height: auto !important;
-            border: none !important; 
-            box-shadow: none !important; 
-            background: white !important;
-            padding: 40px !important;
-          }
-          header, nav, footer, button, .print\\:hidden { display: none !important; }
-          @page { size: portrait; margin: 15mm; }
-        }
-        @keyframes scan {
-          0% { transform: translateY(-100%); }
-          100% { transform: translateY(100%); }
-        }
-      `}} />
     </div>
   );
 };

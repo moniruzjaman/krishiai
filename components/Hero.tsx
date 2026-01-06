@@ -32,7 +32,6 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, lang }) => {
       const themes = [
         "Cinematic aerial shot of lush green rice terraces in Bangladesh",
         "Modern smart farming dashboard floating over a golden wheat field",
-        "A group of Bengali farmers using futuristic digital tools in a greenhouse",
         "Beautiful sunset over a traditional Bangladeshi agricultural landscape high resolution"
       ];
       const randomTheme = themes[Math.floor(Math.random() * themes.length)];
@@ -40,7 +39,8 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, lang }) => {
         const url = await generateAgriImage(randomTheme);
         setBgImage(url);
       } catch (e) {
-        console.error("Hero BG Error:", e);
+        // Log locally but don't disrupt user; fallback to gradient is handled in render
+        console.warn("Hero Background API Quota reached, using fallback gradient.");
       }
     };
     fetchBg();
@@ -77,7 +77,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, lang }) => {
 
   return (
     <div id="hero-section" className="relative bg-slate-900 text-white overflow-hidden rounded-b-[4rem] md:rounded-b-[6rem] shadow-2xl min-h-[600px] flex flex-col justify-center border-b-[20px] border-[#0A8A1F]/30 transition-all duration-700">
-      {/* Background Image Container */}
+      {/* Background Image Container with Gradient Fallback */}
       <div className="absolute inset-0 z-0">
         {bgImage ? (
           <div 
@@ -85,7 +85,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, lang }) => {
             style={{ backgroundImage: `url(${bgImage})` }}
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0A8A1F] via-slate-900 to-black" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0A8A1F] via-slate-900 to-black opacity-80" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent" />
         <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
@@ -98,16 +98,12 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, lang }) => {
       </div>
       
       <div className="relative z-20 max-w-7xl mx-auto px-6 py-20 flex flex-col items-center text-center">
-        {/* Logo and Tag */}
         <div className="mb-10 transform hover:scale-105 transition-transform duration-700 animate-fade-in flex flex-col items-center">
            <div className="mt-4 flex flex-wrap justify-center gap-2">
               <div className="bg-emerald-600/30 backdrop-blur-xl px-6 py-1.5 rounded-full border border-emerald-500/30 flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400">{content.tag}</span>
               </div>
-              {/* Removed langTag badge to keep language control strictly in Header */}
-              
-              {/* Highlight Read Aloud Feature */}
               <div className={`bg-blue-600/30 backdrop-blur-xl px-4 py-1.5 rounded-full border border-blue-400/30 flex items-center space-x-2 transition-all ${speechEnabled ? 'opacity-100 translate-y-0' : 'opacity-50 grayscale'}`}>
                 <span className="text-[14px]">🔊</span>
                 <span className="text-[9px] font-black uppercase tracking-widest text-blue-300">{content.voiceTag}</span>
@@ -124,7 +120,6 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, lang }) => {
           {content.desc}
         </p>
         
-        {/* Primary Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-lg justify-center animate-fade-in [animation-delay:0.4s] mb-12">
           <button 
             onClick={() => onNavigate(View.ANALYZER)}
@@ -143,7 +138,6 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, lang }) => {
           </button>
         </div>
 
-        {/* Floating Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl animate-fade-in [animation-delay:0.6s]">
            <HeroMetric icon="🌾" label={content.stat1} val="৩০%" />
            <HeroMetric icon="🛰️" label={content.stat2} val="১০+" />

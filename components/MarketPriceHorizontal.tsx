@@ -29,7 +29,8 @@ export const MarketPriceHorizontal: React.FC<MarketPriceHorizontalProps> = ({ on
     setError(false);
     try {
       // Pass lang to getTrendingMarketPrices to ensure localized results
-      const data = await getTrendingMarketPrices(lang);
+      // Fix: Explicitly cast lang as Language to satisfy TypeScript
+      const data = await getTrendingMarketPrices(lang as Language);
       if (data && data.length > 0) {
         setPrices(data);
       } else {

@@ -37,6 +37,7 @@ import { generateSpeech, decodeBase64, decodeAudioData } from './services/gemini
 import { Logo } from './components/Logo';
 import { FarmerAvatar } from './components/FarmerAvatar';
 import ShareDialog from './components/ShareDialog';
+import { syncUserProfile, saveReportToSupabase } from './services/supabase';
 
 interface SpeechContextType {
   playSpeech: (text: string, audioBase64?: string) => Promise<void>;
@@ -55,8 +56,6 @@ export const useSpeech = () => {
 };
 
 const App: React.FC = () => {
-  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
-  const [keyErrorType, setKeyErrorType] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<View>(View.HOME);
   const [lang, setLang] = useState<Language>('bn');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -64,6 +63,7 @@ const App: React.FC = () => {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
   const [user, setUser] = useState<User>({
+    uid: 'guest_user_' + Math.random().toString(36).substr(2, 5),
     displayName: 'কৃষক বন্ধু',
     role: 'farmer_entrepreneur',
     progress: {
@@ -87,44 +87,24 @@ const App: React.FC = () => {
   const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
   const [currentSource, setCurrentSource] = useState<AudioBufferSourceNode | null>(null);
 
+  // Auto-sync user data to Supabase when profile changes
   useEffect(() => {
-    const checkApiKey = async () => {
-      // @ts-ignore
-      const selected = await window.aistudio.hasSelectedApiKey();
-      setHasApiKey(selected);
-    };
-    checkApiKey();
+    if (user.uid) {
+      syncUserProfile(user);
+    }
+  }, [user.displayName, user.role, user.progress, user.farmLocation]);
 
-    const handleKeyInvalid = (e: any) => {
-      setKeyErrorType(e.detail.message);
-      setHasApiKey(false); // Trigger re-selection gate
-    };
-
+  useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setInstallPrompt(e);
     };
     
-    window.addEventListener('agritech_api_key_invalid', handleKeyInvalid);
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    
     return () => {
-      window.removeEventListener('agritech_api_key_invalid', handleKeyInvalid);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
-
-  const handleSelectKey = async () => {
-    try {
-      // @ts-ignore
-      await window.aistudio.openSelectKey();
-      // Assume success as per guidelines to avoid race condition
-      setHasApiKey(true);
-      setKeyErrorType(null);
-    } catch (e) {
-      console.error("Key selection failed", e);
-    }
-  };
 
   const stopSpeech = () => {
     if (currentSource) {
@@ -163,6 +143,7 @@ const App: React.FC = () => {
   };
 
   const setIsPlayingState = (val: boolean) => {
+    // Fix: Changed non-existent setIsPlaying to setIsSpeaking to resolve compilation error.
     setIsSpeaking(val);
     if (!val) setCurrentSource(null);
   };
@@ -185,16 +166,21 @@ const App: React.FC = () => {
     }));
   };
 
-  const handleSaveReport = (report: Omit<SavedReport, 'id' | 'timestamp'>) => {
+  const handleSaveReport = async (report: Omit<SavedReport, 'id' | 'timestamp'>) => {
     const newReport: SavedReport = {
       ...report,
       id: Math.random().toString(36).substr(2, 9),
       timestamp: Date.now()
     };
+    
     setUser(prev => ({
       ...prev,
       savedReports: [newReport, ...prev.savedReports]
     }));
+
+    if (user.uid) {
+      saveReportToSupabase(user.uid, newReport);
+    }
   };
 
   useEffect(() => {
@@ -206,47 +192,7 @@ const App: React.FC = () => {
       window.removeEventListener('agritech_navigate', onGlobalNav);
       window.removeEventListener('agritech_save_report', onSaveReportEvent);
     }
-  }, []);
-
-  if (hasApiKey === false) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white font-sans">
-        <div className="max-w-md w-full space-y-10 text-center animate-fade-in">
-           <div className="relative inline-block">
-             <div className="absolute inset-0 bg-emerald-500 blur-3xl opacity-20 animate-pulse"></div>
-             <Logo size="xl" showText={false} className="relative z-10 mx-auto" />
-           </div>
-           <div className="space-y-4">
-             <h1 className="text-4xl font-black tracking-tighter">Krishi <span className="text-emerald-600">AI</span></h1>
-             <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10 text-slate-300 leading-relaxed">
-                {keyErrorType === "REFERRER_BLOCKED" ? (
-                  <div className="space-y-3">
-                    <p className="text-rose-400 font-black uppercase text-xs tracking-widest">🚨 HTTP Referrer Block Detected</p>
-                    <p className="text-sm font-bold">
-                      আপনার বর্তমান API Key-টি "HTTP Referrer Restricted"। এই পরিবেশে অ্যাপটি ব্যবহারের জন্য আপনার এমন একটি পেইড কী প্রয়োজন যাতে কোনো ডোমেইন রেস্ট্রিকশন নেই। 
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-sm font-bold">
-                    অ্যাপটি ব্যবহারের জন্য আপনার নিজের <b>Paid Google Cloud API Key</b> প্রয়োজন। (৪-৩ এরর বা রেফারার ব্লক এড়াতে আপনার কি নির্বাচন করুন)।
-                  </p>
-                )}
-             </div>
-             <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10 text-xs text-slate-500">
-               বিলিং সংক্রান্ত তথ্যের জন্য <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="text-emerald-400 underline">এখানে ক্লিক করুন</a>।
-             </div>
-           </div>
-           <button 
-             onClick={handleSelectKey}
-             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[2rem] text-xl shadow-[0_20px_50px_rgba(16,185,129,0.3)] transition-all active:scale-95"
-           >
-             API কী নির্বাচন করুন
-           </button>
-           <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Digital Agri-Tech Ecosystem v2.5</p>
-        </div>
-      </div>
-    );
-  }
+  }, [user.uid]);
 
   const renderView = () => {
     switch (currentView) {
@@ -448,7 +394,7 @@ const App: React.FC = () => {
              </button>
              <p className="text-[7px] font-black uppercase text-center mt-2 tracking-widest text-emerald-600 dark:text-emerald-400">{lang === 'bn' ? 'এআই স্ক্যান' : 'AI Scan'}</p>
           </div>
-          <NavButton active={currentView === View.LEARNING_CENTER} icon="🎓" label={lang === 'bn' ? "শিখুন" : "Learn"} onClick={() => handleNavigate(View.LEARNING_CENTER)} />
+          <NavButton active={currentView === View.LEARNING_CENTER} icon="🎓" label={lang === 'bn' ? "শিখন" : "Learn"} onClick={() => handleNavigate(View.LEARNING_CENTER)} />
           <NavButton active={currentView === View.PROFILE} icon="👤" label={lang === 'bn' ? "প্রোফাইল" : "Profile"} onClick={() => handleNavigate(View.PROFILE)} />
         </nav>
       </div>

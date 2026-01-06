@@ -15,7 +15,8 @@ export const NewsTicker: React.FC<{ lang?: Language }> = ({ lang = 'bn' }) => {
     const fetchLatestNews = async () => {
       try {
         // Pass lang to getAgriNews to ensure correct localized content
-        const data = await getAgriNews(lang);
+        // Fix: Explicitly cast lang as Language to satisfy TypeScript
+        const data = await getAgriNews(lang as Language);
         if (data && data.length > 0) {
           setNews(data);
         }
