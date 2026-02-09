@@ -1,0 +1,413 @@
+ID,Page,Category,Crop,Issue_Type,Specific_Name,Pathogen/Pest/Nutrient_Type,Symptoms,Diagnostic_Steps,Recommendations,Image_Path,Source_Label,Nearby_Text
+1,15,pest,General,pest,General diagnosis process,,"If the cause were an abiotic one you would expect to see a much more general yellowing or browning of the 
+leaf without the sharp divide between healthy and unhealthy plant material | •	 This symptom is not caused by insect or mite damage; there is no evidence of chewing, no webbing seen and 
+Robert Reeder, CABI",,,images/page15_image1.png,page15_image1,cause. If the cause were an abiotic one you would expect to see a much more general yellowing or browning of the leaf without the sharp divide between healthy and unhealthy plant material. We can 
+2,15,pest,General,pest,General diagnosis process,,"or mite damage; there is no evidence of chewing, no webbing seen and 
+atode, virus or phytoplasma, as these organisms do not cause leaf spots",,,images/page15_image1.png,page15_image1,"or mite damage; there is no evidence of chewing, no webbing seen and atode, virus or phytoplasma, as these organisms do not cause leaf spots. mal or parasitic plants or weeds, as there is no evidence"
+3,20,pest,General,pest,Visual diagnostic key,,BEETLE (GRUB) FLY (M 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm,,,images/page20_image1.png,page20_image1,BEETLE (GRUB) FLY (M 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm
+4,20,pest,General,pest,Visual diagnostic key,,MITE 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm,,,images/page20_image1.png,page20_image1,MITE 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm
+5,20,pest,General,pest,Visual diagnostic key,,THRIPS PLAN BEETLE (GRUB) FLY (M 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm 5 5 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm,,,images/page20_image1.png,page20_image1,THRIPS PLAN BEETLE (GRUB) FLY (M 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm 5 5 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm
+6,20,pest,General,pest,Visual diagnostic key,,PLANT BUG PLANT FLY (MAGGOT) MITE 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm,,,images/page20_image1.png,page20_image1,PLANT BUG PLANT FLY (MAGGOT) MITE 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm
+7,20,pest,General,pest,plant hopper,plant hopper,PLANT HOPPER MITE 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm,,,images/page20_image1.png,page20_image1,PLANT HOPPER MITE 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm
+8,20,pest,General,pest,Visual diagnostic key,,WHITEFLY GRASS The size of the insect is indicated by the green scale on 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm 5 10 15 20 25 30 35 40 45 50 55 60 65 70 ,,,images/page20_image1.png,page20_image1,WHITEFLY GRASS The size of the insect is indicated by the green scale on 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 mm 5 10 15 20 25 30 35 40 45 50 55 60 65 70 
+9,30,pest,tobacco,pest,"like 
+stink bug","like 
+stink bug","Not usually associated with sucking insects 
+ed 
+em 
+r like 
+Stink bug damage on tobacco",,,images/page30_image1.png,page30_image1,of stem borers and the larvae and adults of ts. Not usually associated with sucking insects ed em r like Stink bug damage on tobacco. The insect injects a toxin into the plant causing extensive
+10,34,pest,Rice,pest,Tungro,Virus,"Natural features of the leaf could be mistaken for fungal fruiting bodies. Phil Taylor, CABI Insect both w Phil Tay Ensure that the ‘fruiting bodies’ are not natural features of the leaf (l",,,images/page34_image1.png,page34_image1,"Natural features of the leaf could be mistaken for fungal fruiting bodies. Phil Taylor, CABI Insect both w Phil Tay Ensure that the ‘fruiting bodies’ are not natural features of the leaf (l"
+11,34,pest,Rice,pest,Tungro,Virus,"ting Insect frass can appear like fungal fruiting bodies but will appear both within and outside the leaf spot. Phil Taylor, CABI es of the leaf (left) or some artefact like insect frass (right) O",,,images/page34_image1.png,page34_image1,"ting Insect frass can appear like fungal fruiting bodies but will appear both within and outside the leaf spot. Phil Taylor, CABI es of the leaf (left) or some artefact like insect frass (right) O"
+12,34,pest,Rice,pest,Tungro,Virus,"that could be mistaken for those of the disease-causing pathogen. W the younger lesions. Phil Taylor, CABI Phil Tay What appeared to be fungal fruiting bodies (left) were removed by w were insect fra",,,images/page34_image1.png,page34_image1,"that could be mistaken for those of the disease-causing pathogen. W the younger lesions. Phil Taylor, CABI Phil Tay What appeared to be fungal fruiting bodies (left) were removed by w were insect fra"
+13,37,pest,Maize,pest,Northern corn leaf blight,Fungus,SYMPTOM INSEC Leaf spot YES N when Insect feeding can produce damage that looks like bacterial or fungal infection. This may be due to the physical action of feeding or due to toxins injected into ,SYMPTOM INSEC Leaf spot YES N when Insect feeding can produce damage that looks like bacterial or fungal infection. This may be due to the physical ac,,images/page37_image1.png,page37_image1,SYMPTOM INSEC Leaf spot YES N when Insect feeding can produce damage that looks like bacterial or fungal infection. This may be due to the physical action of feeding or due to toxins injected into 
+14,37,pest,Maize,pest,coconut plant bug,coconut plant bug,"Some sucking insects inject a toxin 
+when they feed that can cause necrotic or yellow spotting",,,images/page37_image1.png,page37_image1,"INSECTS YES Not common. Some sucking insects inject a toxin when they feed that can cause necrotic or yellow spotting. or eding ao. Coconut plant bug damage on cashew. Robert Reeder, CABI"
+15,44,pest,Maize,pest,and thrips,and thrips,SYMPTOM MITE Mosaic (NO) can p The su to viru Cassa Robert The superficial feeding by mites and thrips can resemble viral symp sucked out and this creates a silvery appearance in some cases. Th mosa,SYMPTOM MITE Mosaic (NO) can p The su to viru Cassa Robert The superficial feeding by mites and thrips can resemble viral symp sucked out and this cre,,images/page44_image1.png,page44_image1,SYMPTOM MITE Mosaic (NO) can p The su to viru Cassa Robert The superficial feeding by mites and thrips can resemble viral symp sucked out and this creates a silvery appearance in some cases. Th mosa
+16,46,pest,Sorghum,pest,Sorghum leaf blight,Fungus,"SYMPTOM
+MITE
+Yellowing of leaves
+YES C
+A | Yellowing of palm 
+the trees to go into decline and die | Yellowing and decline associated with p","SYMPTOM MITE Yellowing of leaves YES C A. Elizabeth Johnson, CABI B. Phil Male and female palm mites (A). Yellowing of palm the trees to go into decli",,images/page46_image1.png,page46_image1,"SYMPTOM MITE Yellowing of leaves YES C A. Elizabeth Johnson, CABI B. Phil Male and female palm mites (A). Yellowing of palm the trees to go into decline and die. The numbers of mature tree. Yellowi"
+17,46,pest,Sorghum,pest,Sorghum leaf blight,Fungus,"MITES YES Common. Low populations of mites can c B. Phil Taylor, CABI C. Eliza llowing of palm leaflet associated with palm mite (B). The mit The numbers of mites may be relatively low but will do se",,,images/page46_image1.png,page46_image1,"MITES YES Common. Low populations of mites can c B. Phil Taylor, CABI C. Eliza llowing of palm leaflet associated with palm mite (B). The mit The numbers of mites may be relatively low but will do se"
+18,46,pest,Sorghum,pest,Sorghum leaf blight,Fungus,"of mites can cause many leaves to turn yellow. C. Elizabeth Johnson, CABI mite (B). The mites produce toxic saliva that causes ut will do severe damage and ultimately kill a rees (C).",,,images/page46_image1.png,page46_image1,"of mites can cause many leaves to turn yellow. C. Elizabeth Johnson, CABI mite (B). The mites produce toxic saliva that causes ut will do severe damage and ultimately kill a rees (C)."
+19,58,pest,pepper,pest,Unknown issue,Unknown,"SYMPTOM NEMA Galls YES V as gen Nematode galls on roots of capsicum pepper. Phil Taylor, CABI Nitroge Phil Tay Roots are the only place where nematodes produce galls. Nematode (in peas and beans) How","SYMPTOM NEMA Galls YES V as gen Nematode galls on roots of capsicum pepper. Phil Taylor, CABI Nitroge Phil Tay Roots are the only place where nematode",,images/page58_image1.png,page58_image1,"SYMPTOM NEMA Galls YES V as gen Nematode galls on roots of capsicum pepper. Phil Taylor, CABI Nitroge Phil Tay Roots are the only place where nematodes produce galls. Nematode (in peas and beans) How"
+20,58,pest,Unknown,pest,Unknown issue,Unknown,"NEMATODE YES Very common. Swellings appear on the root, as well as general distortion of root systems. Nitrogen fixing nodules on clover roots. Not nematode galls. Phil Taylor, CABI alls. Nematode ga",,,images/page58_image2.png,page58_image2,"NEMATODE YES Very common. Swellings appear on the root, as well as general distortion of root systems. Nitrogen fixing nodules on clover roots. Not nematode galls. Phil Taylor, CABI alls. Nematode ga"
+21,59,pest,Unknown,pest,Unknown issue,Unknown,"SYMPTOM MITES Galls YES V Eduardo E. Trujillo, Flickr Tim Ha Many different types of insect and mite can cause plants to produce cells to multiply so that a good habitat is produced for the adults or","SYMPTOM MITES Galls YES V Eduardo E. Trujillo, Flickr Tim Ha Many different types of insect and mite can cause plants to produce cells to multiply so ",,images/page59_image1.png,page59_image1,"SYMPTOM MITES Galls YES V Eduardo E. Trujillo, Flickr Tim Ha Many different types of insect and mite can cause plants to produce cells to multiply so that a good habitat is produced for the adults or"
+22,59,pest,Unknown,pest,Unknown issue,Unknown,"insect or a mite is smooth and appears structured whereas the galls and have a rough surface. Contrast these galls (above) with those produced by microorganism and indeterminate. Phil Taylor, CABI Ph",,,images/page59_image3.png,page59_image3,"insect or a mite is smooth and appears structured whereas the galls and have a rough surface. Contrast these galls (above) with those produced by microorganism and indeterminate. Phil Taylor, CABI Ph"
+23,105,pest,Unknown,pest,Unknown issue,Unknown,centre outwards. Sometimes the regions are no yellow and green fade into each other. Flecking from insect or mite feeding) can produce symp a mosaic but are generally not considerd such surface layer,,,images/page105_image2.png,page105_image2,centre outwards. Sometimes the regions are no yellow and green fade into each other. Flecking from insect or mite feeding) can produce symp a mosaic but are generally not considerd such surface layer
+24,108,pest,Unknown,pest,Unknown issue,Unknown,om as you are not only able to see the m is present in such numbers that it is visible e growth is a problem and can be a secondary se. It is all on the leaf rather than in the leaf is possible to,,,images/page108_image3.png,page108_image3,om as you are not only able to see the m is present in such numbers that it is visible e growth is a problem and can be a secondary se. It is all on the leaf rather than in the leaf is possible to
+25,108,pest,Unknown,pest,Unknown issue,Unknown,"n with insect attack. This is sooty mould growing on the sugar excreted by insects on the surface of the sapodilla. d.org Phil Taylor, CABI nd This reddish surface growth can be wiped from the u",,,images/page108_image6.png,page108_image6,"n with insect attack. This is sooty mould growing on the sugar excreted by insects on the surface of the sapodilla. d.org Phil Taylor, CABI nd This reddish surface growth can be wiped from the u"
+26,110,pest,Unknown,pest,Unknown issue,Unknown,"BORE HOLES (STEM/FRUIT) The e surro produ Insect bore hole in banana stem. Insect Julien Lamontagne-Godwin, CABI Eric Bo",,,images/page110_image1.png,page110_image1,"BORE HOLES (STEM/FRUIT) The e surro produ Insect bore hole in banana stem. Insect Julien Lamontagne-Godwin, CABI Eric Bo"
+27,110,pest,Unknown,pest,Unknown issue,Unknown,"The entry or exit hole of an insect pest, sometimes surrounded by frass. It is often the laval stages that produce the bore hole, but it can be the adults too. Insect bore hole in avocado. Eric Boa",,,images/page110_image2.png,page110_image2,"The entry or exit hole of an insect pest, sometimes surrounded by frass. It is often the laval stages that produce the bore hole, but it can be the adults too. Insect bore hole in avocado. Eric Boa"
+28,110,pest,tomato,pest,Unknown issue,Unknown,"Insect bore hole in banana stem. Insect Julien Lamontagne-Godwin, CABI Eric Bo Insect bore hole in tomato. Maize second Julien Lamontagne-Godwin, CABI Mattthe",,,images/page110_image3.png,page110_image3,"Insect bore hole in banana stem. Insect Julien Lamontagne-Godwin, CABI Eric Bo Insect bore hole in tomato. Maize second Julien Lamontagne-Godwin, CABI Mattthe"
+29,110,pest,Unknown,pest,Unknown issue,Unknown,"Insect bore hole in avocado. Eric Boa, CABI Maize shoot borer and its bore hole damage, with associated secondary rot and scattered frass. Mattthew Cock, CABI",,,images/page110_image4.png,page110_image4,"Insect bore hole in avocado. Eric Boa, CABI Maize shoot borer and its bore hole damage, with associated secondary rot and scattered frass. Mattthew Cock, CABI"
+30,111,pest,Unknown,pest,Unknown issue,Unknown,"Galls on roots, the roots are swollen and misshapen. Galls o fashio Eric Boa, CABI Phil Tay Galls on the underside of tree leaves. Gall on insect Phil Taylor, CABI Whitne",,,images/page111_image3.png,page111_image3,"Galls on roots, the roots are swollen and misshapen. Galls o fashio Eric Boa, CABI Phil Tay Galls on the underside of tree leaves. Gall on insect Phil Taylor, CABI Whitne"
+31,111,pest,Unknown,pest,Unknown issue,Unknown,"Galls on woody twigs. These galls are growing in a disordered fashion and are not determinate. Phil Taylor, CABI Gall on buffalo gourd stem which has been cut open to reveal the insect larva inside",,,images/page111_image4.png,page111_image4,"Galls on woody twigs. These galls are growing in a disordered fashion and are not determinate. Phil Taylor, CABI Gall on buffalo gourd stem which has been cut open to reveal the insect larva inside"
+32,111,pest,Unknown,pest,Unknown issue,Unknown,"Galls on the underside of tree leaves. Gall on insect Phil Taylor, CABI Whitne Insect galls on oak. Note that they are all precisely the same size. Specta Robert Reeder, CABI Robert",,,images/page111_image5.png,page111_image5,"Galls on the underside of tree leaves. Gall on insect Phil Taylor, CABI Whitne Insect galls on oak. Note that they are all precisely the same size. Specta Robert Reeder, CABI Robert"
+33,111,pest,Unknown,pest,Unknown issue,Unknown,"Gall on buffalo gourd stem which has been cut open to reveal the insect larva inside. Whitney Cranshaw, Colorado State University, Bugwood.org e size. Spectacular galls on crack willow. Robert Reed",,,images/page111_image6.png,page111_image6,"Gall on buffalo gourd stem which has been cut open to reveal the insect larva inside. Whitney Cranshaw, Colorado State University, Bugwood.org e size. Spectacular galls on crack willow. Robert Reed"
+34,118,pest,Unknown,pest,Unknown issue,Unknown,"Plantwise Diagnostic Field Guide A tool to diagnose crop problems and make recommendations for their management Compiled by Phil Taylor Every day, extension workers are bombarded by questions from f","Plantwise Diagnostic Field Guide A tool to diagnose crop problems and make recommendations for their management Compiled by Phil Taylor Every day, extension wor","p problems and make recommendations for their management Compiled by Phil Taylor Every day, extension workers are bombarded by questions from f",images/page118_image1.png,page118_image1,"Plantwise Diagnostic Field Guide A tool to diagnose crop problems and make recommendations for their management Compiled by Phil Taylor Every day, extension workers are bombarded by questions from f"
+35,23,disease,Wheat,disease,Septoria leaf blotch,Fungus,"aphs for each mineral and try and spot the pattern, 
+ssium shortage show the leaf edge is yellowing and",,,images/page23_image1.png,page23_image1,"aphs for each mineral and try and spot the pattern, ssium shortage show the leaf edge is yellowing and"
+36,25,disease,Wheat,disease,"v
+fusarium","v
+fusarium","SYMPTOM
+FUNG
+Wilt
+YES V
+Fusarium wilt on banana",SYMPTOM FUNG Wilt YES V Fusarium wilt on banana. Note the internal discolouration that is a common symptom associated with this pathogen. Vertici Uppe,,images/page25_image1.png,page25_image1,"SYMPTOM FUNG Wilt YES V Fusarium wilt on banana. Note the internal discolouration that is a common symptom associated with this pathogen. Vertici Upper Scot Nelson, University of Hawaii Howard F i l"
+37,25,disease,Wheat,disease,usually fusarium,usually fusarium,"hat is 
+Verticillium wilt on sunflower | Upper leaves are wilted and the lower ones are dead",,,images/page25_image1.png,page25_image1,FUNGUS YES Very common. Usually Fusarium or Verticillium sp. hat is Verticillium wilt on sunflower. Leaves are severely short of water. Upper leaves are wilted and the lower ones are dead. Howard F.
+38,26,disease,bean,disease,"by 
+pythium","by 
+pythium","SYMPTOM
+WATE
+Wilt
+YES C
+phyto
+damp
+Base of dry bean seedlings having damped off after attack by 
+Pythium","SYMPTOM WATE Wilt YES C phyto damp Base of dry bean seedlings having damped off after attack by Pythium. Phytop plant i Howard F. Schwartz, Colorado S",,images/page26_image1.png,page26_image1,"SYMPTOM WATE Wilt YES C phyto damp Base of dry bean seedlings having damped off after attack by Pythium. Phytop plant i Howard F. Schwartz, Colorado State University, Bugwood.org Gerald Bugwoo"
+39,26,disease,pepper,disease,"the 
+phytophthora","the 
+phytophthora","by 
+Phytopthora capsici attacking the roots of capsicum pepper, the 
+plant is severely wilted due to the damage to the roots | org
+Notice 
+o the 
+Phytophthora katsurae causing yellowing and wilt | Heart rot of 
+coconut",,,images/page26_image1.png,page26_image1,"by Phytopthora capsici attacking the roots of capsicum pepper, the plant is severely wilted due to the damage to the roots. Gerald Holmes, California Polytechnic State University at San Luis Obispo,"
+40,27,disease,potato,disease,Loose smut,Fungus,"SYMPTOM
+BACT
+Wilt
+YES C
+on tom
+Ralstonia on potato | This wilt has occurred suddenly as there are 
+no symptoms other than the wilt","SYMPTOM BACT Wilt YES C on tom Ralstonia on potato. This wilt has occurred suddenly as there are no symptoms other than the wilt. Interna Phil Taylor,",,images/page27_image1.png,page27_image1,"SYMPTOM BACT Wilt YES C on tom Ralstonia on potato. This wilt has occurred suddenly as there are no symptoms other than the wilt. Interna Phil Taylor, CABI Scot Ne"
+41,27,disease,pepper,disease,Loose smut,Fungus,"WILT
+LEAF SPOT
+WITCHES’ BROOM
+CANKER
+MOSIAC
+LOWING OF LEAVES
+BACTERIA
+YES Common",,,images/page27_image1.png,page27_image1,"WILT LEAF SPOT WITCHES’ BROOM CANKER MOSIAC LOWING OF LEAVES BACTERIA YES Common. Often seen in Solanaceae, e.g. Ralstonia on tomatoes and cucurbit crops s occurred suddenly as there are t. Interna"
+42,27,disease,potato,disease,to pseudomonas,to pseudomonas,"This wilt has occurred suddenly as there are 
+no symptoms other than the wilt | Interna
+Phil Taylor, CABI
+Scot Ne
+The papaya has turned yellow and is severely wilted due 
+to Pseudomonas solanacearum infection","nly as there are no symptoms other than the wilt. Interna Phil Taylor, CABI Scot Ne The papaya has turned yellow and is severely wilted due to Pseud",,images/page27_image1.png,page27_image1,"Ralstonia on potato. This wilt has occurred suddenly as there are no symptoms other than the wilt. Interna Phil Taylor, CABI Scot Ne The papaya has turned yellow and is severely wilted due to Pseud"
+43,27,disease,pepper,disease,Loose smut,Fungus,"Scot Nelson, University of Hawaii
+due 
+Capsicum pepper with bacterial wilt",,,images/page27_image1.png,page27_image1,"re are Internal discolouration due to Ralstonia on capsicum pepper. Scot Nelson, University of Hawaii due Capsicum pepper with bacterial wilt. Note the complete collapse of the plant in the foregr"
+44,29,disease,tomato,disease,Melanosis,Virus,"SYMPTOM
+VIRU
+Wilt
+(NO) 
+broad
+Don Ferrin, Louisiana State University Agricultural Center, Bugwood | org 
+Scot Ne
+Notice the reduced size as well as the wilt of this tomato plant (left) 
+on fruit (right)","SYMPTOM VIRU Wilt (NO) broad Don Ferrin, Louisiana State University Agricultural Center, Bugwood.org Scot Ne Notice the reduced size as well as the wi",,images/page29_image1.png,page29_image1,"SYMPTOM VIRU Wilt (NO) broad Don Ferrin, Louisiana State University Agricultural Center, Bugwood.org Scot Ne Notice the reduced size as well as the wilt of this tomato plant (left) on fruit (right)"
+45,29,disease,tomato,disease,Melanosis,Virus,"VIRUS
+(NO) although some viruses of tomato, pineapple and 
+broad bean cause wilting | org 
+Scot Nelson, University of Hawaii 
+mato plant (left) infected with Tomato spotted wilt virus",spotted wilt virus. Symptoms,,images/page29_image1.png,page29_image1,"VIRUS (NO) although some viruses of tomato, pineapple and broad bean cause wilting. d.org Scot Nelson, University of Hawaii mato plant (left) infected with Tomato spotted wilt virus. Symptoms"
+46,30,disease,corn,disease,Brown spot,Fungus,"SYMPTOM
+INSEC
+Wilt
+YES C
+root fe
+unless
+European corn borer-induced wilt on 
+cotton",SYMPTOM INSEC Wilt YES C root fe unless European corn borer-induced wilt on cotton. Lepido is an a borers proleg a fly la,,images/page30_image1.png,page30_image1,SYMPTOM INSEC Wilt YES C root fe unless European corn borer-induced wilt on cotton. Lepido is an a borers proleg a fly la
+47,31,disease,wheat,disease,Bacterial leaf blight,Bacterium,"SYMPTOM
+NUTR
+Wilt
+(NO) b
+plants
+Wheat
+deficie
+Dr Prak
+SYMPTOM
+PHYS
+Wilt
+YES V",SYMPTOM NUTR Wilt (NO) b plants Wheat deficie Dr Prak SYMPTOM PHYS Wilt YES V,,images/page31_image1.png,page31_image1,SYMPTOM NUTR Wilt (NO) b plants Wheat deficie Dr Prak SYMPTOM PHYS Wilt YES V
+48,32,disease,Rice,disease,Leaf blast,Fungus,"SYMPTOM
+FUNG
+Leaf spot
+YES V
+of crop
+Leaf sp
+Yubak D
+The leaf spot is a classic symptom of many groups of fungi | The margins of the leaf spot may be a d
+(see below) can produce similar symptoms | Leaf spots on grasses often 
+i",SYMPTOM FUNG Leaf spot YES V of crop Leaf sp Yubak D The leaf spot is a classic symptom of many groups of fungi. The leaf is g and immediate surroundi,,images/page32_image1.png,page32_image1,SYMPTOM FUNG Leaf spot YES V of crop Leaf sp Yubak D The leaf spot is a classic symptom of many groups of fungi. The leaf is g and immediate surrounding area. The margins of the leaf spot may be a d (
+49,32,disease,Rice,disease,Leaf blast,Fungus,ail within a leaf spot (as well as mites and other small pests),,,images/page32_image1.png,page32_image1,( g g ) y uiting bodies are not produced by bacteria or water moulds (although ting bodies are not always present (even in fungal infections) and are h a hand lens. ail within a leaf spot (as well a
+50,35,disease,tomato,disease,by phytophthora,by phytophthora,"Leaf spot
+YES C
+water-
+White 
+little n
+Leaf spot caused by Phytophthora infestans on tomato | Note the 
+zone of lighter coloured leaf around the darker necrotic area: this 
+is the area where spore production may be taking place",,,images/page35_image1.png,page35_image1,Leaf spot YES C water- White little n Leaf spot caused by Phytophthora infestans on tomato. Note the zone of lighter coloured leaf around the darker necrotic area: this is the area where spore prod
+51,35,disease,pepper,disease,by phytophthora,by phytophthora,"e the 
+a: this 
+Leaf spot caused by Phytophthora capsici on capsicum pepper",,,images/page35_image1.png,page35_image1,"YES Common. Generally rapidly spreading, may have water-soaked appearance and sporulation around edges. White rusts and downy mildews can produce pustules with little necrosis. e the a: this Leaf"
+52,36,disease,bean,disease,Northern leaf blight,Fungus,"SYMPTOM
+BACT
+Leaf spot
+YES V
+Bacterial infection of cabbage (left) and bean (right)","SYMPTOM BACT Leaf spot YES V Bacterial infection of cabbage (left) and bean (right). Notice how in both ca Howard F. Schwartz, Colorado State Universi",,images/page36_image1.png,page36_image1,"SYMPTOM BACT Leaf spot YES V Bacterial infection of cabbage (left) and bean (right). Notice how in both ca Howard F. Schwartz, Colorado State University, Bugwood.org Bacteria cannot penetrate a leaf i"
+53,36,disease,citrus,disease,Northern leaf blight,Fungus,"SYMPTOM
+VIRUS
+Leaf spot
+(NO) a
+comm
+Citrus ringspot virus – not what would normally be called a true 
+leaf spot | org
+Spots 
+true le
+Scot Ne
+Viruses can produce a type of leaf spot on some occasions but they are","SYMPTOM VIRUS Leaf spot (NO) a comm Citrus ringspot virus – not what would normally be called a true leaf spot. Stephen M. Garnsey, USDA-ARS, South At",,images/page36_image1.png,page36_image1,"SYMPTOM VIRUS Leaf spot (NO) a comm Citrus ringspot virus – not what would normally be called a true leaf spot. Stephen M. Garnsey, USDA-ARS, South Atlantic Area, Bugwood.org Spots true le Scot Ne "
+54,36,disease,tomato,disease,Northern leaf blight,Fungus,"Ringspots are more 
+common | a true 
+rg
+Spots caused by Tomato spotted wilt virus are not considered 
+true leaf spots",,,images/page36_image1.png,page36_image1,"VIRUS (NO) although there are exceptions. Ringspots are more common. a true rg Spots caused by Tomato spotted wilt virus are not considered true leaf spots. Scot Nelson, University of Hawaii ons b"
+55,38,disease,Maize,disease,Stalk rot,Fungus,"SYMPTOM
+NUTR
+Leaf spot
+YES N
+Shorta
+sympt
+Potassium deficiency in lucerne: the 
+marginal yellowing is associated with 
+scattered white necrotic spots",SYMPTOM NUTR Leaf spot YES N Shorta sympt Potassium deficiency in lucerne: the marginal yellowing is associated with scattered white necrotic spots. Z,,images/page38_image1.png,page38_image1,SYMPTOM NUTR Leaf spot YES N Shorta sympt Potassium deficiency in lucerne: the marginal yellowing is associated with scattered white necrotic spots. Zinc d on the
+56,38,disease,wheat,disease,Stalk rot,Fungus,"Necrotic spots on leaves can
+Shortages of potassium, zinc, manganese and c
+symptom, if severe | h 
+Zinc deficiency in wheat: a pale grey spot 
+on the middle of the leaf","nc, manganese and c symptom, if severe. h Zinc deficiency in wheat: a pale grey spot on the middle of t",,images/page38_image1.png,page38_image1,"NUTRIENT DEFICIENCIES YES Not common. Necrotic spots on leaves can Shortages of potassium, zinc, manganese and c symptom, if severe. h Zinc deficiency in wheat: a pale grey spot on the middle of t"
+57,38,disease,tomato,disease,Stalk rot,Fungus,"anganese and copper can all lead to this 
+y spot
+Blossom end rot on tomato: this disorder",,,images/page38_image1.png,page38_image1,s on leaves can indicate nutrient deficiencies. anganese and copper can all lead to this y spot Blossom end rot on tomato: this disorder
+58,39,disease,pepper,disease,Gibberella ear rot,Fungus,"SYMPTOM
+PHYS
+Leaf spot
+YES C
+lead t
+Strong sunlight can cause burnt patches 
+on fruit (pepper)",SYMPTOM PHYS Leaf spot YES C lead t Strong sunlight can cause burnt patches on fruit (pepper). Strong on lea,,images/page39_image1.png,page39_image1,SYMPTOM PHYS Leaf spot YES C lead t Strong sunlight can cause burnt patches on fruit (pepper). Strong on lea
+59,42,disease,Maize,disease,Nitrogen deficiency,,"SYMPTOM
+BACT
+Canker
+YES C
+Phil Taylor, CABI
+Phil Ta","SYMPTOM BACT Canker YES C Phil Taylor, CABI Phil Ta",,images/page42_image1.png,page42_image1,"SYMPTOM BACT Canker YES C Phil Taylor, CABI Phil Ta"
+60,42,disease,Maize,disease,Nitrogen deficiency,,"Phil Taylor, CABI
+Phil Tay
+Eric Boa, CABI
+Phil Tay
+Fungal cankers on ash and Jatropha (top); a bacterial canker on ash (bottom
+the damage has healed (bottom right) | Notice how the dead plant material is
+of the canker",,,images/page42_image1.png,page42_image1,"Phil Taylor, CABI Phil Tay Eric Boa, CABI Phil Tay Fungal cankers on ash and Jatropha (top); a bacterial canker on ash (bottom the damage has healed (bottom right). Notice how the dead plant material "
+61,43,disease,Maize,disease,Herbicide injury,,"VIRUS YES Very common. Scot Nelson, University of Hawaii",,,images/page43_image1.png,page43_image1,"VIRUS YES Very common. Scot Nelson, University of Hawaii"
+62,51,disease,tobacco,disease,Unknown issue,Unknown,"org
+Howard
+If the downy mildew just causes a leaf spot there is little distortion o",SYMPTOM WATE Distortion of leaves YES N shape Leaf distortion by blue mould on tobacco caused by Peronospora tabacina. Plasm R.J. Reynolds Tobacco Com,,images/page51_image2.png,page51_image2,"SYMPTOM WATE Distortion of leaves YES N shape Leaf distortion by blue mould on tobacco caused by Peronospora tabacina. Plasm R.J. Reynolds Tobacco Company Slide Set, Bugwood.org Howard If the downy"
+63,52,disease,tomato,disease,Unknown issue,Unknown,"SYMPTOM VIRUS Distortion of leaves YES V Leaf distortion in tomato. Contrast the infected leaf (left) to the healthy leaf (right). The infected one is smaller, twisted and blistered (rugose). The le",SYMPTOM VIRUS Distortion of leaves YES V Leaf distortion in tomato. Contrast the infected leaf (left) to the healthy leaf (right). The infected one is,,images/page52_image1.png,page52_image1,"SYMPTOM VIRUS Distortion of leaves YES V Leaf distortion in tomato. Contrast the infected leaf (left) to the healthy leaf (right). The infected one is smaller, twisted and blistered (rugose). The le"
+64,52,disease,lettuce,disease,Unknown issue,Unknown,"VIRUS YES Very common. the The lettuce has severe leaf distortion; in this case the leaf veins are unusually large, distorting the whole appearance of the leaf. od org Gerald Holmes, California Pol",,,images/page52_image2.png,page52_image2,"VIRUS YES Very common. the The lettuce has severe leaf distortion; in this case the leaf veins are unusually large, distorting the whole appearance of the leaf. od org Gerald Holmes, California Pol"
+65,55,disease,potato,disease,Unknown issue,Unknown,"SYMPTOM VIRUS Little leaf YES N Potato leaf roll virus: the potato leaves are rolled and severely reduced in size on the infected plant on the right. Eugene E. Nelson, Bugwood.org Ground the ste Kalu",SYMPTOM VIRUS Little leaf YES N Potato leaf roll virus: the potato leaves are rolled and severely reduced in size on the infected plant on the right. ,,images/page55_image1.png,page55_image1,"SYMPTOM VIRUS Little leaf YES N Potato leaf roll virus: the potato leaves are rolled and severely reduced in size on the infected plant on the right. Eugene E. Nelson, Bugwood.org Ground the ste Kalu"
+66,55,disease,Unknown,disease,Unknown issue,Unknown,"VIRUS YES Not common. ely Groundnut rosette virus. The ground nut plant is small partially due to the stem length but also because of the severe reduction in leaf size. Kalule Okello David, MoA Uga",,,images/page55_image2.png,page55_image2,"VIRUS YES Not common. ely Groundnut rosette virus. The ground nut plant is small partially due to the stem length but also because of the severe reduction in leaf size. Kalule Okello David, MoA Uga"
+67,57,disease,Unknown,disease,Unknown issue,Unknown,"SYMPTOM BACT Galls YES C grasse Crown gall disease on Jamaican sorrel (left) and sugarbeet (right). The bac unstructured and disorganised manner. Phil Taylor, CABI and Oliver T. Neher, University of ",SYMPTOM BACT Galls YES C grasse Crown gall disease on Jamaican sorrel (left) and sugarbeet (right). The bac unstructured and disorganised manner. Phil,,images/page57_image1.png,page57_image1,"SYMPTOM BACT Galls YES C grasse Crown gall disease on Jamaican sorrel (left) and sugarbeet (right). The bac unstructured and disorganised manner. Phil Taylor, CABI and Oliver T. Neher, University of "
+68,60,disease,Unknown,disease,Unknown issue,Unknown,"SYMPTOM
+FUNG
+Drying/necrosis/blight
+YES V
+Sclero
+rotting
+Gerald 
+Obispo
+SYMPTOM
+WATE
+Drying/necrosis/blight
+YES V",SYMPTOM FUNG Drying/necrosis/blight YES V Sclero rotting Gerald Obispo SYMPTOM WATE Drying/necrosis/blight YES V,,images/page60_image1.png,page60_image1,SYMPTOM FUNG Drying/necrosis/blight YES V Sclero rotting Gerald Obispo SYMPTOM WATE Drying/necrosis/blight YES V
+69,60,disease,Unknown,disease,Unknown issue,Unknown,"SYMPTOM
+WATE
+Drying/necrosis/blight
+YES V
+Taro le
+spots 
+been k
+Scot Ne
+The major water moulds that cause this symptom are species of Phy
+and only relatively few cause foliar symptoms of rotting and drying",SYMPTOM WATE Drying/necrosis/blight YES V Taro le spots been k Scot Ne The major water moulds that cause this symptom are species of Phy and only rela,,images/page60_image2.png,page60_image2,SYMPTOM WATE Drying/necrosis/blight YES V Taro le spots been k Scot Ne The major water moulds that cause this symptom are species of Phy and only relatively few cause foliar symptoms of rotting and d
+70,61,disease,Unknown,disease,Unknown issue,Unknown,"SYMPTOM
+BACT
+Drying/necrosis/blight
+YES V
+Xantho
+and ne
+Howar
+SYMPTOM
+VIRUS
+Drying/necrosis/blight
+(NO) a",SYMPTOM BACT Drying/necrosis/blight YES V Xantho and ne Howar SYMPTOM VIRUS Drying/necrosis/blight (NO) a,,images/page61_image1.png,page61_image1,SYMPTOM BACT Drying/necrosis/blight YES V Xantho and ne Howar SYMPTOM VIRUS Drying/necrosis/blight (NO) a
+71,61,disease,Unknown,disease,Unknown issue,Unknown,"SYMPTOM
+VIRU
+Drying/necrosis/blight
+(NO) a
+necros
+Joseph Mulema, CABI
+Noah P
+Viruses very rarely cause necrosis and drying of the plant","SYMPTOM VIRU Drying/necrosis/blight (NO) a necros Joseph Mulema, CABI Noah P Viruses very rarely cause necrosis and drying of the plant. The majo Cass",,images/page61_image2.png,page61_image2,"SYMPTOM VIRU Drying/necrosis/blight (NO) a necros Joseph Mulema, CABI Noah P Viruses very rarely cause necrosis and drying of the plant. The majo Cassava brown streak virus (right)."
+72,61,disease,Unknown,disease,Unknown issue,Unknown,"VIRUS (NO) although there are exceptions such as Maize lethal necrosis and Cassava brown streak. Noah Phiri, CABI lant. The major exceptions are Maize lethal necrosis (left) and",,,images/page61_image3.png,page61_image3,"VIRUS (NO) although there are exceptions such as Maize lethal necrosis and Cassava brown streak. Noah Phiri, CABI lant. The major exceptions are Maize lethal necrosis (left) and"
+73,62,disease,Unknown,disease,Unknown issue,Unknown,"SYMPTOM
+NEMA
+Drying/necrosis/blight
+YES M
+roots b
+The cu
+the ou
+nemat
+John B
+SYMPTOM
+INSEC
+Drying/necrosis/blight
+YES C",SYMPTOM NEMA Drying/necrosis/blight YES M roots b The cu the ou nemat John B SYMPTOM INSEC Drying/necrosis/blight YES C,,images/page62_image1.png,page62_image1,SYMPTOM NEMA Drying/necrosis/blight YES M roots b The cu the ou nemat John B SYMPTOM INSEC Drying/necrosis/blight YES C
+74,93,disease,Unknown,disease,Unknown issue,Unknown,"Woody parts of plants cannot wilt, only the 
+attached leaves | e 
+Squash plants wilting due to shortage of water",,,images/page93_image2.png,page93_image2,"Leaves and young stems droop down due to lack of water reaching them. Woody parts of plants cannot wilt, only the attached leaves. e Squash plants wilting due to shortage of water. The leaves are "
+75,99,disease,Unknown,disease,Unknown issue,Unknown,"LEAF SPOT
+A disc
+the re
+funga
+Leaf spots on cassava clearly seen contrasting against the green 
+leaf",,,images/page99_image1.png,page99_image1,"LEAF SPOT A disc the re funga Leaf spots on cassava clearly seen contrasting against the green leaf. These surrou Robert Reeder, CABI Scot Ne"
+76,99,disease,Unknown,disease,Unknown issue,Unknown,"a 
+ions 
+Circular leafspots with a clearly defined border | Scot Nelson, University of Hawaii
+he leaf 
+pening 
+These leaf spots have no yellowing around them; pale material is 
+in the centre of the leaf spot and brown dead material is around 
+the outside, directly against the green healthy material",,,images/page99_image6.png,page99_image6,"a ions Circular leafspots with a clearly defined border. Notice how they reach a maximum size. Scot Nelson, University of Hawaii he leaf pening These leaf spots have no yellowing around them; pa"
+77,101,disease,Unknown,disease,Unknown issue,Unknown,"The brown regions are due to the healing 
+reactions of the leaf and are not a rot",,,images/page101_image1.png,page101_image1,CHEWED where many mealy for fra diagn The damage caused has not made holes through the leaf but has just eroded the surface. The brown regions are due to the healing reactions of the leaf and are n
+78,101,disease,Unknown,disease,Unknown issue,Unknown,"The brown regions are due to the healing 
+reactions of the leaf and are not a rot",,,images/page101_image3.png,page101_image3,"just eroded the surface. The brown regions are due to the healing reactions of the leaf and are not a rot. the ve not co size bu Phil Taylor, CABI Phil Tay This banana leaf was attacked by two boring"
+79,109,disease,Unknown,disease,Unknown issue,Unknown,"CANKERS (STEM LESIONS)
+An op
+This cherry tree has a classic canker in the side | Notice how the 
+edges of the canker are bulging",,,images/page109_image1.png,page109_image1,"CANKERS (STEM LESIONS) An op This cherry tree has a classic canker in the side. Notice how the edges of the canker are bulging. This is bluebe beginn Phil Taylor, CABI Gerald"
+80,109,disease,blueberry,disease,Unknown issue,Unknown,"w the 
+This is a very early canker that is just beginning to form on 
+blueberry",,,images/page109_image2.png,page109_image2,An open wound in woody or semi-woody stems. w the This is a very early canker that is just beginning to form on blueberry. The stem has split and the characteristic shape is beginning to form. Ger
+81,109,disease,Unknown,disease,Unknown issue,Unknown,"This cherry tree has a classic canker in the side | Notice how the 
+edges of the canker are bulging | This is
+bluebe
+beginn
+Phil Taylor, CABI
+Gerald
+An old and mostly dead canker on beech; the swollen edges of 
+the canker remain although the canker does not appear active",,,images/page109_image3.png,page109_image3,"This cherry tree has a classic canker in the side. Notice how the edges of the canker are bulging. This is bluebe beginn Phil Taylor, CABI Gerald An old and mostly dead canker on beech; the swollen "
+82,109,disease,blueberry,disease,Unknown issue,Unknown,"w the 
+This is a very early canker that is just beginning to form on 
+blueberry | Young canker developing on walnut | Alternatively the plant will 
+seal it off so that it will become a canker",,,images/page109_image4.png,page109_image4,"w the This is a very early canker that is just beginning to form on blueberry. The stem has split and the characteristic shape is beginning to form. Gerald Holmes, Valent USA Corporation, Bugwood."
+83,112,disease,Unknown,disease,Unknown issue,Unknown,"The tissue has to become soft and slimy (in addition to 
+brown) to be considered a true rot | e 
+Fruit is especially prone to rotting as it is often sweet and soft | These bananas are rotting from one end and it is spreading down 
+the length of the banana",,,images/page112_image2.png,page112_image2,The tissue has to become soft and slimy (in addition to brown) to be considered a true rot. e Fruit is especially prone to rotting as it is often sweet and soft. These bananas are rotting from one 
+84,112,disease,Unknown,disease,Unknown issue,Unknown,"Fruit is especially prone to rotting as it is often sweet and soft | These bananas are rotting from one end and it is spreading down 
+the length of the banana | Scot Nelson, University of Hawaii
+red 
+Classic rot on cacao; the rot is spreading up from the base of the 
+pod (surface growth is also visible on the outside of the fruit in 
+the blackened area)",,,images/page112_image4.png,page112_image4,"Fruit is especially prone to rotting as it is often sweet and soft. These bananas are rotting from one end and it is spreading down the length of the banana. Scot Nelson, University of Hawaii red "
+85,113,disease,Unknown,disease,Unknown issue,Unknown,"Depending on whether the 
+material had softened this could also be considered as rot",,,images/page113_image4.png,page113_image4,"Internal staining within a banana stem cut crossways. Eric Boa, CABI the Internal staining within a radish. Depending on whether the material had softened this could also be considered as rot. Eri"
+86,113,disease,Unknown,disease,Unknown issue,Unknown,"Depending on whether the 
+material had softened this could also be considered as rot",taining is a common symptom in field-grown tomat,,images/page113_image6.png,page113_image6,"the Internal staining within a radish. Depending on whether the material had softened this could also be considered as rot. Eric Boa, CABI Internal staining is a common symptom in field-grown tomat"
+87,114,disease,Unknown,disease,Unknown issue,Unknown,"The whole plant is 
+wilting but there are some areas where the material has dried | The condition is similar to rot but the 
+material has not become soft and slimy but has remained hard 
+and dry",,,images/page114_image4.png,page114_image4,"Some branches on this coffee have dried. The whole plant is wilting but there are some areas where the material has dried. Robert Reeder, CABI urned This walnut fruit is drying. The condition is s"
+88,114,disease,Unknown,disease,Unknown issue,Unknown,"The condition is similar to rot but the 
+material has not become soft and slimy but has remained hard 
+and dry",,,images/page114_image6.png,page114_image6,"turned This walnut fruit is drying. The condition is similar to rot but the material has not become soft and slimy but has remained hard and dry. Andrej Kunca, National Forest Centre – Slovakia Dry"
+89,23,deficiency,Wheat,deficiency,nitrogen deficiency,nitrogen,g p y Nitrogen Phos,,,images/page23_image1.png,page23_image1,g p y Nitrogen Phos
+90,23,deficiency,Wheat,deficiency,nitrogen deficiency,nitrogen,y p Potassium Mang,,,images/page23_image1.png,page23_image1,y p Potassium Mang
+91,23,deficiency,Wheat,deficiency,iron deficiency,iron,fferent crops. Compare the photographs for each m eddening and each of those of potassium shortage,,,images/page23_image1.png,page23_image1,fferent crops. Compare the photographs for each m eddening and each of those of potassium shortage
+92,23,deficiency,Wheat,deficiency,iron deficiency,iron,"the pictures of iron deficiency a
+s yellowing and turning brown at the edges",,,images/page23_image1.png,page23_image1,"pot the pattern, e.g. the pictures of iron deficiency a s yellowing and turning brown at the edges. While f"
+93,23,deficiency,Wheat,deficiency,iron deficiency,iron,on deficiency all appear very different but in each c edges. While field symptoms may be sufficient to, edges. While field symptoms may be sufficient to,,images/page23_image1.png,page23_image1,on deficiency all appear very different but in each c edges. While field symptoms may be sufficient to
+94,23,deficiency,Wheat,deficiency,iron deficiency,iron,Magnesium Iron,,,images/page23_image1.png,page23_image1,Magnesium Iron
+95,23,deficiency,Wheat,deficiency,iron deficiency,iron,Iron Sulph,,,images/page23_image1.png,page23_image1,Iron Sulph
+96,23,deficiency,Wheat,deficiency,nitrogen deficiency,nitrogen,Sulphur Zinc,,,images/page23_image1.png,page23_image1,Sulphur Zinc
+97,23,deficiency,Wheat,deficiency,nitrogen deficiency,nitrogen,Zinc,,,images/page23_image1.png,page23_image1,Zinc
+98,44,deficiency,Maize,deficiency,iron deficiency,iron,"SYMPTOM
+NUTR
+Mosaic
+YES C
+produ
+Zinc-deficient maize plant with bands or 
+streaks of yellow and green",SYMPTOM NUTR Mosaic YES C produ Zinc-deficient maize plant with bands or streaks of yellow and green. Dr Prakash Kumar Iron-d in mor Dr Prak Th t iti ,,images/page44_image1.png,page44_image1,SYMPTOM NUTR Mosaic YES C produ Zinc-deficient maize plant with bands or streaks of yellow and green. Dr Prakash Kumar Iron-d in mor Dr Prak Th t iti l di d f l t th t
+99,44,deficiency,Maize,deficiency,iron deficiency,iron,NUTRIENT DEFICIENCIES YES Common. The mottling caused by deficien produce a mosaic type of symptom. s or Iron-deficient pearl millet with faded veins in more advanced stage. Dr Prakash Kumar and Dr,ce a mosaic type of symptom. s or Iron-deficient pearl millet with faded veins in more advanced stage. Dr Prakash Kumar and Dr,,images/page44_image1.png,page44_image1,NUTRIENT DEFICIENCIES YES Common. The mottling caused by deficien produce a mosaic type of symptom. s or Iron-deficient pearl millet with faded veins in more advanced stage. Dr Prakash Kumar and Dr
+100,47,deficiency,Sorghum,deficiency,nitrogen deficiency,nitrogen,"Yellowing of leaves
+YES V
+can g
+but a 
+Nitrogen-deficient pale green lentil leaflet",,,images/page47_image1.png,page47_image1,Yellowing of leaves YES V can g but a Nitrogen-deficient pale green lentil leaflet. Nitrog Dr Prakash Kumar Dr Prak
+101,47,deficiency,Sorghum,deficiency,nitrogen deficiency,nitrogen,"Depending on the pattern, yellowing 
+can give an indication of which mineral may be deficient 
+but a definitive field diagnosis is difficult | Nitrogen-deficient maize: lower leaves are yellow", a definitive field diagnosis is difficult. Nitrogen-deficient maize: lower leaves ar,,images/page47_image1.png,page47_image1,"YES Very common. Depending on the pattern, yellowing can give an indication of which mineral may be deficient but a definitive field diagnosis is difficult. Nitrogen-deficient maize: lower leaves ar"
+102,47,deficiency,wheat,deficiency,nitrogen deficiency,nitrogen,"Nitrog
+Dr Prakash Kumar
+Dr Prak
+Nitrogen-deficient wheat: yellowing of older leaves | Nitrog
+Dr Prakash Kumar and Dr Manoj Kumar Sharma
+Dr Prak
+Older leaves of nitrogen-deficient plants are yellow",,,images/page47_image1.png,page47_image1,Nitrogen-deficient pale green lentil leaflet. Nitrog Dr Prakash Kumar Dr Prak Nitrogen-deficient wheat: yellowing of older leaves. Nitrog Dr Prakash Kumar and Dr Manoj Kumar Sharma Dr Prak Older leav
+103,47,deficiency,bean,deficiency,nitrogen deficiency,nitrogen,"Nitrogen-deficient maize: lower leaves are yellow | Dr Prakash Kumar
+Nitrogen-deficient cluster bean: general yellowing",,,images/page47_image1.png,page47_image1,Nitrogen-deficient maize: lower leaves are yellow. Dr Prakash Kumar Nitrogen-deficient cluster bean: general yellowing. Dr Prakash Kumar
+104,48,deficiency,wheat,deficiency,iron deficiency,iron,"Yellowing of leaves
+Miner
+yellow
+leaf ve
+defici
+Iron deficiency in wheat: severe yellowing between veins",,,images/page48_image1.png,page48_image1,Yellowing of leaves Miner yellow leaf ve defici Iron deficiency in wheat: severe yellowing between veins. Green sweet Dr Prakash Kumar and Dr Manoj Kumar Sharma Dr Prak
+105,48,deficiency,potato,deficiency,iron deficiency,iron,"Mineral deficiency commonly causes leaves to turn 
+yellow | Green veins contrast sharply against the yellowed iron-deficient 
+sweet potato leaf",,,images/page48_image2.png,page48_image2,Mineral deficiency commonly causes leaves to turn yellow. The position of those leaves and the colour of the leaf veins can give an indication as to which mineral is deficient. Green veins contrast
+106,48,deficiency,wheat,deficiency,iron deficiency,iron,Iron deficiency in wheat: severe yellowing between veins,,,images/page48_image3.png,page48_image3,Iron deficiency in wheat: severe yellowing between veins. Green sweet Dr Prakash Kumar and Dr Manoj Kumar Sharma Dr Prak Severely iron-deficient green gram: white leaf lamina while veins remain gre
+107,48,deficiency,potato,deficiency,iron deficiency,iron,"Green veins contrast sharply against the yellowed iron-deficient 
+sweet potato leaf | Dr Prakash Kumar and Dr Manoj Kumar Sharma
+veins 
+Iron-deficient lentil plant: upper leaflets are yellow",,,images/page48_image4.png,page48_image4,Green veins contrast sharply against the yellowed iron-deficient sweet potato leaf. Dr Prakash Kumar and Dr Manoj Kumar Sharma veins Iron-deficient lentil plant: upper leaflets are yellow. Dr Prakas
+108,49,deficiency,Unknown,deficiency,nitrogen deficiency,nitrogen,"Yellowing of leaves
+Sulph
+becau
+other 
+the tip
+Sulphur deficiency in pea: yellowing of upper leaves",,,images/page49_image1.png,page49_image1,Yellowing of leaves Sulph becau other the tip Sulphur deficiency in pea: yellowing of upper leaves. Dr Manoj Kumar Sharma Sulph Dr Prak
+109,49,deficiency,Unknown,deficiency,nitrogen deficiency,nitrogen,Sulphur deficiency is shown in the upper leaves first because this element is less mobile within the plant than other nutrients and the plant is unable to remobilize it to the tip of the plant. Sul,,,images/page49_image2.png,page49_image2,Sulphur deficiency is shown in the upper leaves first because this element is less mobile within the plant than other nutrients and the plant is unable to remobilize it to the tip of the plant. Sul
+110,49,deficiency,sugarcane,deficiency,nitrogen deficiency,nitrogen,lphur deficiency in pea: yellowing of upper leaves,,,images/page49_image3.png,page49_image3,lphur deficiency in pea: yellowing of upper leaves. Manoj Kumar Sharma lphur-deficient sugarcane plant. Manoj Kumar Sharma mptoms of sulphur deficiency are similar to those of nitro
+111,49,deficiency,potato,deficiency,nitrogen deficiency,nitrogen,"Dr Prakash Kumar
+Sulphur deficiency in potato: the pale yellow sulphur-deficient plant 
+(left) compared with dark green normal plant (right) | Dr Prakash Kumar
+nitrogen deficiency but the younger leaves are the first to turn yellow",,,images/page49_image4.png,page49_image4,Sulphur deficiency in ground nut: uniformly pale young leaves. Dr Prakash Kumar Sulphur deficiency in potato: the pale yellow sulphur-deficient plant (left) compared with dark green normal plant (ri
+112,15,table,General,diagnostic_steps,General diagnosis process,,"• This symptom is not caused by a nematode, virus or phytoplasma, as these organisms do not cause leaf spots. | • This symptom could be caused by a bacterial pathogen but you would expect the spots to have a water-soaked | • This symptom could be caused by a water mould but the leaf spots are not spreading aggressively (they are","• This symptom is not caused by insect or mite damage; there is no evidence of chewing, no webbing seen and • This symptom is not caused by a nematode, virus","• This symptom is not caused by insect or mite damage; there is no evidence of chewing, no webbing seen and | • This symptom is not caused by a nematode, virus or phytoplasma, as these organisms do not cause leaf spots. | • This symptom is not caused by a mammal or parasitic plants or weeds, as there is no evidence of it having",images/page15_image1.png,page15_table1,"• This symptom is not caused by insect or mite damage; there is no evidence of chewing, no webbing seen and • This symptom is not caused by a nematode, virus or phytoplasma, as these organisms do not "
+113,16,table,Unknown,diagnostic_steps,Unknown issue,Unknown,"• What parts are affected? • Describe symptoms using the correct terminology. • Observe changes in shape, colour and growth. • Look for visible signs of insects, fungi or other pests. • Where are the ","• Look for visible signs of insects, fungi or other pests.","• Distribution: random, edge of the plot only, in patches, pattern caused by use | • Obtain information on the varieties used, recent history of chemical inputs used, etc.",,page16_table1,"• What parts are affected? • Describe symptoms using the correct terminology. • Observe changes in shape, colour and growth. • Look for visible signs of insects, fungi or other pests. • Where are the "
+114,32,table,Rice,diagnostic_steps,Leaf blast,Fungus,Leaves are exposed to a great range of potentially damaging agents. Once a leaf is damaged a ,,,images/page32_image1.png,page32_image1,Leaves are exposed to a great range of potentially damaging agents. Once a leaf is damaged a 
+115,66,table,Unknown,diagnostic_steps,Unknown issue,Unknown,2. Look for foliar symptoms as well as symptoms on the end of the fruit or tip of the plant. ,2. Look for foliar symptoms as well as symptoms on the end of the fruit or tip of the plant.,,,Diagnostic-Field-Guide_pg66_table_1_rows1cols2,2. Look for foliar symptoms as well as symptoms on the end of the fruit or tip of the plant. 
+116,71,table,Unknown,diagnostic_steps,Unknown issue,Unknown,1. The border between the yellow and green may be sharper in the case of viral infections and the leaf patterns,,,,Diagnostic-Field-Guide_pg71_table_1_rows1cols2,1. The border between the yellow and green may be sharper in the case of viral infections and the leaf patterns 
+117,74,table,Unknown,diagnostic_steps,Unknown issue,Unknown,1. Economic 2. Effective 3. Safe 4. Practical 5. Locally available ,,,,page74_table1,1. Economic 2. Effective 3. Safe 4. Practical 5. Locally available 
+118,81,table,Unknown,diagnostic_steps,Unknown issue,Unknown,"• Carefully examine the specimen and gather as much information as you can from the • Cut the specimen open (where appropriate) and look for internal symptoms, use a • Are the symptoms symmetrical on ","• Carefully examine the specimen and gather as much information as you can from the | • Cut the specimen open (where appropriate) and look for internal symptoms, use a","• Cut the specimen open (where appropriate) and look for internal symptoms, use a | • Remember the Big 5 features of a recommendation for managing a plant health problem. | • Assess the severity of the problem and use your experience to judge whether management",,page81_table1,"• Carefully examine the specimen and gather as much information as you can from the • Cut the specimen open (where appropriate) and look for internal symptoms, use a • Are the symptoms symmetrical on "
+119,83,table,Unknown,diagnostic_steps,Unknown issue,Unknown,Flutriafol1 Prothioconazole | Chlorothalonil Zineb | Fenarimol1 Thiram Kresoxim-methyl1 Boscalid1 Chlorothalonil,,,,Diagnostic-Field-Guide_pg83_table_1_rows39cols2,Metalaxyl-M* Mancozeb Thiram Fosetyl-Al Carboxin1 Fludioxonil1 Thiram Silthiofam Prochloraz Hymexazole* Fludioxinil1 Carboxin1 Flutriafol1 Prothioconazole Prochloraz Triadimenol Metalaxyl* Dimethomorp
+120,84,table,Unknown,diagnostic_steps,Unknown issue,Unknown,Fenitrothion Acephate Chlorpyrifos | Chlorpyrifos Fenitrothion | Chlorpyrifos Malathion Fenitrothion,,,,Diagnostic-Field-Guide_pg84_table_1_rows39cols2,Cypermethrin Deltamethrin lambda-Cyhalothrin tau-Fluvalinate alpha-Cypermethrin Bifenthrin Fenvalerate Permethrin Acetamiprid Imidacloprid Dimethoate Chlorpyrifos Malathion Pirimicarb Pymetrozine Fatt

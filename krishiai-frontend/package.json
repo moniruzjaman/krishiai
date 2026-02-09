@@ -1,0 +1,30 @@
+{
+	"name": "krishi-ai-v2",
+	"version": "2.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 vite",
+		"build": "tsc && vite build",
+		"preview": "vite preview",
+		"backend": "python main.py"
+	},
+	"dependencies": {
+		"@google/genai": "^1.35.0",
+		"@supabase/supabase-js": "^2.90.1",
+		"axios": "^1.6.8",
+		"firebase": "^12.7.0",
+		"react": "^19.2.3",
+		"react-dom": "^19.2.3",
+		"recharts": "^3.6.0"
+	},
+	"devDependencies": {
+		"@types/react": "^19.2.8",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^5.1.2",
+		"cross-env": "^7.0.3",
+		"terser": "^5.46.0",
+		"typescript": "^5.9.3",
+		"vite": "^7.3.1"
+	}
+}
