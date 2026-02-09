@@ -10,7 +10,7 @@ import {
   getAISprayAdvisory
 } from '../services/ai/geminiService';
 import { queryQwenVL } from '../services/ai/huggingfaceService';
-import { GroundingChunk, WeatherData, SavedReport, Language } from '../types';
+import { GroundingChunk, WeatherData } from '../types';
 import { getStoredLocation } from '../services/utils/locationService';
 import DynamicPrecisionForm from './DynamicPrecisionForm';
 import { useSpeech } from '../App';

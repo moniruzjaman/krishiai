@@ -121,7 +121,13 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, onBack,
                 protocol="SMART-ANALYTICS-V1"
                 source="Krishi AI Core"
                 lang={lang}
-                onBack={onBack}
+                onBack={onBack || (() => { })}
+                guideSteps={[
+                    "Review your daily and weekly usage statistics.",
+                    "Check the confidence distribution of AI diagnoses.",
+                    "Monitor token usage and cost efficiency.",
+                    "Export data for external analysis."
+                ]}
                 icon="📊"
                 themeColor="blue"
             />
@@ -219,7 +225,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, onBack,
                                             paddingAngle={5}
                                             dataKey="value"
                                         >
-                                            {modelData.map((entry, index) => (
+                                            {modelData.map((_, index) => (
                                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                             ))}
                                         </Pie>
@@ -227,10 +233,10 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, onBack,
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="mt-4 grid grid-cols-2 gap-4">
-                                    {modelData.map((m, i) => (
+                                    {modelData.map((m: any, i) => (
                                         <div key={m.name} className="flex items-center space-x-2">
                                             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
-                                            <span className="text-[10px] font-bold text-slate-600 uppercase">{m.name}: {m.value}</span>
+                                            <span className="text-[10px] font-bold text-slate-600 uppercase">{m.name}: {String(m.value)}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -242,7 +248,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, onBack,
                                     <div className="flex justify-between items-end border-b pb-4">
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Most Used</p>
-                                            <h4 className="text-2xl font-black text-slate-900">{modelData.sort((a, b) => b.value - a.value)[0]?.name || 'N/A'}</h4>
+                                            <h4 className="text-2xl font-black text-slate-900">{modelData.sort((a: any, b: any) => b.value - a.value)[0]?.name || 'N/A'}</h4>
                                         </div>
                                         <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">Primary</span>
                                     </div>

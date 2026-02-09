@@ -28,7 +28,6 @@ const thinkingMessages = [
 ];
 
 const AgriPodcast: React.FC<AgriPodcastProps> = ({ onAction, onShowFeedback, onBack }) => {
-  const [activeTheme, setActiveTheme] = useState<string | null>(null);
   const [customTopic, setCustomTopic] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
@@ -166,7 +165,7 @@ const AgriPodcast: React.FC<AgriPodcastProps> = ({ onAction, onShowFeedback, onB
               {podcastThemes.map(theme => (
                 <button
                   key={theme.id}
-                  onClick={() => { setActiveTheme(theme.id); generatePodcast(theme.prompt); }}
+                  onClick={() => { generatePodcast(theme.prompt); }}
                   className="p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl hover:border-emerald-500 hover:bg-emerald-50 transition-all active:scale-95 text-left group"
                 >
                   <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">{theme.icon}</div>
@@ -274,10 +273,10 @@ const AgriPodcast: React.FC<AgriPodcastProps> = ({ onAction, onShowFeedback, onB
               পডকাস্ট স্ক্রিপ্ট (Transcript)
             </h3>
             <div className="prose prose-slate max-w-none text-slate-700 font-medium leading-relaxed whitespace-pre-wrap text-lg">
-              {podcastData.text}
+              {podcastData?.text || ''}
             </div>
 
-            {podcastData.groundingChunks.length > 0 && (
+            {podcastData && podcastData.groundingChunks.length > 0 && (
               <div className="mt-12 pt-8 border-t border-slate-50">
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">তথ্যসূত্র (Grounding):</h4>
                 <div className="flex flex-wrap gap-2">

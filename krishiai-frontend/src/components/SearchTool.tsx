@@ -1,9 +1,8 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-/* Fix: Removed non-existent sanitizeForTTS import */
-import { searchAgriculturalInfo, generateSpeech, decodeBase64, decodeAudioData, getTrendingMarketPrices } from '../services/ai/geminiService';
+import React, { useState, useEffect, useRef } from 'react';
+import { searchAgriculturalInfo, generateSpeech, decodeBase64, decodeAudioData } from '../services/ai/geminiService';
 import { queryQwenVL } from '../services/ai/huggingfaceService';
-import { GroundingChunk, SavedReport } from '../types';
+import { GroundingChunk, SavedReport, UserSettings } from '../types';
 import ShareDialog from './ShareDialog';
 
 interface SearchToolProps {
@@ -11,6 +10,7 @@ interface SearchToolProps {
   onSaveReport?: (report: Omit<SavedReport, 'id' | 'timestamp'>) => void;
   onShowFeedback?: () => void;
   onBack?: () => void;
+  userSettings?: UserSettings;
 }
 
 const aiSearchLoadingSteps = [
@@ -22,21 +22,11 @@ const aiSearchLoadingSteps = [
   "সঠিক তথ্য সম্বলিত রিপোর্ট তৈরি করা হচ্ছে..."
 ];
 
-const toBanglaNumber = (val: any) => {
-  if (val === null || val === undefined) return '';
-  const banglaNumbers: Record<string, string> = {
-    '0': '০', '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯'
-  };
-  return val.toString().replace(/[0-9]/g, (w: string) => banglaNumbers[w]);
-};
-
-const SearchTool: React.FC<SearchToolProps> = ({ onAction, onSaveReport, onShowFeedback, onBack }) => {
+const SearchTool: React.FC<SearchToolProps> = ({ onAction, onSaveReport: _onSaveReport, onShowFeedback: _onShowFeedback, onBack }) => {
   const [activeMode, setActiveMode] = useState<'market' | 'ai'>('market');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<{ text: string, groundingChunks: GroundingChunk[] } | null>(null);
-  const [livePrices, setLivePrices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isPricesLoading, setIsPricesLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -46,21 +36,7 @@ const SearchTool: React.FC<SearchToolProps> = ({ onAction, onSaveReport, onShowF
   const audioContextRef = useRef<AudioContext | null>(null);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
-  useEffect(() => {
-    if (activeMode === 'market') fetchLivePrices();
-  }, [activeMode]);
 
-  const fetchLivePrices = async () => {
-    setIsPricesLoading(true);
-    try {
-      const data = await getTrendingMarketPrices('bn');
-      setLivePrices(data);
-    } catch (e) {
-      console.error("Live Price Fetch Error:", e);
-    } finally {
-      setIsPricesLoading(false);
-    }
-  };
 
   useEffect(() => {
     let interval: any;

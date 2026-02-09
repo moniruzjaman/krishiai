@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSpeech } from '../App';
 import { Language, User, SavedReport } from '../types';
 
@@ -91,10 +91,7 @@ interface CABIDiagnosisTrainingProps {
 
 const CABIDiagnosisTraining: React.FC<CABIDiagnosisTrainingProps> = ({
    onBack,
-   onAction,
-   lang,
-   user,
-   onSaveReport
+   onAction
 }) => {
    const [currentModule, setCurrentModule] = useState(0);
    const [progress, setProgress] = useState(0);

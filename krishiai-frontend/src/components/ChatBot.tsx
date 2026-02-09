@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { sendChatMessage, getLiveWeather } from '../services/ai/geminiService';
 import { getStoredLocation, saveStoredLocation } from '../services/utils/locationService';
-import { ChatMessage, UserCrop, WeatherData, User, View, GroundingChunk } from '../types';
+import { ChatMessage, UserCrop, WeatherData, User, View, GroundingChunk, UserSettings } from '../types';
 
 interface ChatBotProps {
   user?: User;
@@ -10,6 +10,7 @@ interface ChatBotProps {
   userCrops?: UserCrop[];
   onAction?: () => void;
   onBack?: () => void;
+  userSettings?: UserSettings;
 }
 
 const PERSONAS = [

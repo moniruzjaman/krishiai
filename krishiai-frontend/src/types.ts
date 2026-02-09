@@ -164,6 +164,8 @@ export interface UserSettings {
     market: boolean;
     cropHealth: boolean;
   };
+  modelProvider?: string;
+  aiStrategy?: string;
 }
 
 export interface User {

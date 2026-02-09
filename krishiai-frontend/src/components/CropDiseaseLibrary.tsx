@@ -12,7 +12,7 @@ interface CropDiseaseLibraryProps {
   onSaveReport?: (report: Omit<SavedReport, 'id' | 'timestamp'>) => void;
 }
 
-export const CropDiseaseLibrary: React.FC<CropDiseaseLibraryProps> = ({ onAction, onShowFeedback, onBack, onSaveReport }) => {
+export const CropDiseaseLibrary: React.FC<CropDiseaseLibraryProps> = ({ onAction, onBack }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>(CROP_CATEGORIES[0].id);
   const [selectedCrop, setSelectedCrop] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

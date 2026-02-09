@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, createContext } from "react";
-import { View, User, SavedReport, Language, UserRole } from "./types";
+import { View, User, SavedReport, Language } from "./types";
 import { Hero } from "./components/Hero";
 import ToolsHub from "./components/ToolsHub";
 import ChatBot from "./components/ChatBot";
@@ -48,7 +48,10 @@ import {
 import { Logo } from "./components/Logo";
 import { FarmerAvatar } from "./components/FarmerAvatar";
 import ShareDialog from "./components/ShareDialog";
-import { syncUserProfile, saveReportToSupabase } from "./services/utils/supabase";
+import {
+	syncUserProfile,
+	saveReportToSupabase,
+} from "./services/utils/supabase";
 
 interface SpeechContextType {
 	playSpeech: (text: string, audioBase64?: string) => Promise<void>;
@@ -241,7 +244,7 @@ const App: React.FC = () => {
 					<div className="animate-fade-in space-y-0">
 						<Hero onNavigate={handleNavigate} lang={lang} />
 						<div className="max-w-7xl mx-auto px-4 -mt-16 sm:-mt-24 relative z-[100] space-y-8 pb-12">
-							<WeatherHorizontal lang={lang} onNavigate={handleNavigate} />
+							<WeatherHorizontal lang={lang} />
 							<MarketPriceHorizontal onNavigate={handleNavigate} lang={lang} />
 							<NewsTicker lang={lang} />
 						</div>

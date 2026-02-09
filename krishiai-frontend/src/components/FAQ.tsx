@@ -146,7 +146,7 @@ const FAQ: React.FC<FAQProps> = ({ onShowFeedback, onBack }) => {
     setMetaAnswer(null);
     try {
       const res = await getAgriMetaExplanation(queryToUse);
-      setMetaAnswer(res);
+      setMetaAnswer(res || null);
       if (res) {
         playTTS(res);
       }
@@ -246,8 +246,8 @@ const FAQ: React.FC<FAQProps> = ({ onShowFeedback, onBack }) => {
             key={cat.id}
             onClick={() => setActiveTab(cat.id)}
             className={`flex items-center space-x-2 px-6 py-3 rounded-2xl whitespace-nowrap text-sm font-black transition-all ${activeTab === cat.id
-                ? 'bg-[#0A8A1F] text-white shadow-xl scale-105'
-                : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-100'
+              ? 'bg-[#0A8A1F] text-white shadow-xl scale-105'
+              : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-100'
               }`}
           >
             <span>{cat.icon}</span>

@@ -101,14 +101,14 @@ The project follows a **3-Layer Architecture**:
 
 ## 🧪 Testing
 
-### Frontend
+### Frontend Testing
 
 ```bash
 cd krishiai-frontend
 npm run build  # Verify TypeScript compilation
 ```
 
-### Backend
+### Backend Testing
 
 ```bash
 cd krishi-ai-backend
@@ -157,4 +157,4 @@ For issues or questions, please refer to the project documentation in `docs/` or
 
 ---
 
-**Built with ❤️ for farmers and agricultural communities**
+### Built with ❤️ for farmers and agricultural communities

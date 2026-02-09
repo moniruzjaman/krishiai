@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { getOrchestrationService } from '../services/quota/orchestrationInit';
 import { getLiveWeather, decodeBase64, decodeAudioData } from '../services/ai/geminiService';
 import { getStoredLocation } from '../services/utils/locationService';
-import { AnalysisResult, SavedReport, UserCrop, View, Language, WeatherData, SourceReference, ManagementAdvice, AIModel, ConfidenceLevel } from '../types';
+import { AnalysisResult, SavedReport, UserCrop, View, Language, WeatherData, SourceReference, ManagementAdvice, AIModel, ConfidenceLevel, UserSettings } from '../types';
 import { CROPS_BY_CATEGORY } from '../constants';
 import { apiService } from '../services/utils/apiService';
 import ShareDialog from './ShareDialog';
@@ -24,6 +24,7 @@ interface AnalyzerProps {
   userRank?: string;
   userCrops?: UserCrop[];
   lang: Language;
+  userSettings?: UserSettings;
 }
 
 const ANALYZER_TOUR: TourStep[] = [

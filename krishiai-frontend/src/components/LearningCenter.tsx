@@ -1,26 +1,23 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  identifyPlantSpecimen, 
-  generateAgriQuiz, 
-  searchEncyclopedia, 
-  generateSpeech, 
-  decodeBase64, 
-  decodeAudioData 
+import React, { useState, useRef } from 'react';
+import {
+  identifyPlantSpecimen,
+  generateAgriQuiz,
+  searchEncyclopedia
 } from '../services/ai/geminiService';
 import { queryQwenVL } from '../services/ai/huggingfaceService';
-import { AgriQuizQuestion, Language, GroundingChunk } from '../types';
+import { AgriQuizQuestion, Language } from '../types';
 import { useSpeech } from '../App';
 
 interface LearningCenterProps {
   onBack: () => void;
   onAction: (xp: number) => void;
+  lang: Language;
 }
 
-const LearningCenter: React.FC<LearningCenterProps> = ({ onBack, onAction }) => {
+const LearningCenter: React.FC<LearningCenterProps> = ({ onBack, onAction, lang }) => {
   const [activeMode, setActiveMode] = useState<'menu' | 'scan' | 'quiz' | 'dictionary'>('menu');
-  const [lang] = useState<Language>('bn');
-  const { playSpeech, stopSpeech, isSpeaking } = useSpeech();
+  const { stopSpeech } = useSpeech();
 
   const DashboardCard = ({ icon, title, desc, onClick, color }: any) => (
     <button onClick={onClick} className={`${color} p-8 rounded-[3rem] text-white text-left shadow-xl hover:scale-[1.02] transition-all active:scale-95 group relative overflow-hidden h-full flex flex-col`}>
@@ -64,7 +61,7 @@ const PlantScanner = ({ onComplete, lang }: any) => {
   const [report, setReport] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { playSpeech, isSpeaking } = useSpeech();
+  const { playSpeech } = useSpeech();
 
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -100,14 +97,14 @@ const PlantScanner = ({ onComplete, lang }: any) => {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div className="space-y-6">
-           <div className="aspect-square bg-slate-50 rounded-[3rem] border-4 border-dashed border-slate-200 flex flex-col items-center justify-center overflow-hidden relative">
-              {image ? <img src={image} className="w-full h-full object-cover" alt="Sample" /> : <p className="text-slate-400 font-bold">ছবি দিন</p>}
-              <input type="file" ref={fileInputRef} className="hidden" onChange={handleScan} accept="image/*" />
-           </div>
-           <button onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="w-full bg-emerald-600 text-white py-6 rounded-[2.2rem] font-black text-lg shadow-xl">ছবি নির্বাচন করুন</button>
+          <div className="aspect-square bg-slate-50 rounded-[3rem] border-4 border-dashed border-slate-200 flex flex-col items-center justify-center overflow-hidden relative">
+            {image ? <img src={image} className="w-full h-full object-cover" alt="Sample" /> : <p className="text-slate-400 font-bold">ছবি দিন</p>}
+            <input type="file" ref={fileInputRef} className="hidden" onChange={handleScan} accept="image/*" />
+          </div>
+          <button onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="w-full bg-emerald-600 text-white py-6 rounded-[2.2rem] font-black text-lg shadow-xl">ছবি নির্বাচন করুন</button>
         </div>
         <div className="flex flex-col">
-           {isLoading ? <div className="flex-1 bg-slate-50 rounded-[3rem] flex flex-col items-center justify-center space-y-4"><div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div><p className="font-black text-slate-400 uppercase text-xs">Analyzing Specimen...</p></div> : report ? <div className="flex-1 bg-slate-900 rounded-[3rem] p-10 text-white prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed">{report}</div> : <div className="flex-1 border-4 border-dashed rounded-[3rem] opacity-30"></div>}
+          {isLoading ? <div className="flex-1 bg-slate-50 rounded-[3rem] flex flex-col items-center justify-center space-y-4"><div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div><p className="font-black text-slate-400 uppercase text-xs">Analyzing Specimen...</p></div> : report ? <div className="flex-1 bg-slate-900 rounded-[3rem] p-10 text-white prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed">{report}</div> : <div className="flex-1 border-4 border-dashed rounded-[3rem] opacity-30"></div>}
         </div>
       </div>
     </div>
@@ -118,7 +115,7 @@ const Encyclopedia = ({ lang }: any) => {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { playSpeech, isSpeaking } = useSpeech();
+  const { playSpeech } = useSpeech();
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -140,28 +137,25 @@ const Encyclopedia = ({ lang }: any) => {
 
   return (
     <div className="bg-white rounded-[4rem] p-10 md:p-16 shadow-2xl animate-fade-in border">
-       <div className="text-center mb-12"><h2 className="text-3xl font-black text-slate-800">এআই এনসাইক্লোপিডিয়া</h2></div>
-       <div className="flex gap-3 mb-12">
-          <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="টার্ম খুঁজুন..." className="flex-1 bg-slate-50 border-2 rounded-[2rem] px-8 py-5 font-bold outline-none" onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
-          <button onClick={handleSearch} disabled={isLoading} className="bg-indigo-600 text-white px-10 rounded-[2rem] font-black">{isLoading ? '...' : 'খুঁজুন'}</button>
-       </div>
-       {result && <div className="bg-slate-50 rounded-[3rem] p-10 border relative animate-fade-in-up prose prose-slate max-w-none whitespace-pre-wrap text-lg leading-relaxed">{result}</div>}
+      <div className="text-center mb-12"><h2 className="text-3xl font-black text-slate-800">এআই এনসাইক্লোপিডিয়া</h2></div>
+      <div className="flex gap-3 mb-12">
+        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="টার্ম খুঁজুন..." className="flex-1 bg-slate-50 border-2 rounded-[2rem] px-8 py-5 font-bold outline-none" onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
+        <button onClick={handleSearch} disabled={isLoading} className="bg-indigo-600 text-white px-10 rounded-[2rem] font-black">{isLoading ? '...' : 'খুঁজুন'}</button>
+      </div>
+      {result && <div className="bg-slate-50 rounded-[3rem] p-10 border relative animate-fade-in-up prose prose-slate max-w-none whitespace-pre-wrap text-lg leading-relaxed">{result}</div>}
     </div>
   );
 };
 
 const QuizModule = ({ onComplete, lang }: any) => {
-  const [topic, setTopic] = useState('');
   const [questions, setQuestions] = useState<AgriQuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [showExplanation, setShowExplanation] = useState(false);
 
   const startQuiz = async (selectedTopic: string) => {
-    setTopic(selectedTopic);
     setIsLoading(true);
     try {
       const data = await generateAgriQuiz(selectedTopic, lang);
@@ -174,7 +168,6 @@ const QuizModule = ({ onComplete, lang }: any) => {
     if (selectedAnswer !== null) return;
     setSelectedAnswer(idx);
     if (idx === questions[currentIndex].correctAnswer) setScore(s => s + 1);
-    setShowExplanation(true);
   };
 
   if (isLoading) return <div className="bg-white p-24 text-center rounded-[4rem]">প্রস্তুত হচ্ছে...</div>;

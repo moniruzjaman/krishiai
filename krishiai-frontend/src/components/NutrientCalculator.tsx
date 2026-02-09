@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { detectCurrentAEZDetails, getStoredLocation } from '../services/utils/locationService';
-import { getAIPlantNutrientAdvice, generateSpeech, decodeBase64, decodeAudioData } from '../services/ai/geminiService';
+import { getAIPlantNutrientAdvice, generateSpeech } from '../services/ai/geminiService';
 import { CROPS_BY_CATEGORY } from '../constants';
 import { User, SavedReport, View, Language } from '../types';
 import ShareDialog from './ShareDialog';
@@ -24,11 +24,11 @@ const NUTRIENT_TOUR: TourStep[] = [
   { targetId: "nutrient-form-container", title: "তথ্য প্রদান", content: "আপনার ফসল, জমির মাপ এবং মাটি পরীক্ষা (ঐচ্ছিক) এর তথ্য দিন।", position: 'bottom' }
 ];
 
-const NutrientCalculator: React.FC<NutrientCalculatorProps> = ({ user, onBack, onAction, onSaveReport, onShowFeedback, onNavigate, lang }) => {
+const NutrientCalculator: React.FC<NutrientCalculatorProps> = ({ onBack, onAction, onSaveReport, onShowFeedback, lang }) => {
   const [crop, setCrop] = useState('ধান');
   const [aez, setAez] = useState('অঞ্চল নির্বাচন করুন');
   const [currentLoc, setCurrentLoc] = useState<{ lat: number, lng: number } | null>(null);
-  const [soil, setSoil] = useState('মাঝারি উর্বরতা');
+  const [soil] = useState('মাঝারি উর্বরতা');
   const [unit, setUnit] = useState<'bigha' | 'decimal'>('bigha');
   const [areaSize, setAreaSize] = useState<number>(33);
   const [advice, setAdvice] = useState<string | null>(null);
@@ -41,7 +41,7 @@ const NutrientCalculator: React.FC<NutrientCalculatorProps> = ({ user, onBack, o
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
 
-  const { playSpeech, stopSpeech, isSpeaking, speechEnabled } = useSpeech();
+  const { playSpeech, isSpeaking, speechEnabled } = useSpeech();
   const recognitionRef = useRef<any>(null);
 
   const nutrientLoadingSteps = lang === 'bn' ? [
@@ -110,7 +110,7 @@ const NutrientCalculator: React.FC<NutrientCalculatorProps> = ({ user, onBack, o
     setIsLoading(true); setAdvice(null); setLoadingStep(0);
     try {
       const result = await getAIPlantNutrientAdvice(crop, aez, soil, areaSize, unit, lang);
-      setAdvice(result);
+      setAdvice(result || null);
       if (speechEnabled && result) playSpeech(result);
       if (onAction) onAction();
       if (onShowFeedback) onShowFeedback();

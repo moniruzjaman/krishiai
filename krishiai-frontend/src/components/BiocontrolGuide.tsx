@@ -84,7 +84,7 @@ const BiocontrolGuide: React.FC<BiocontrolGuideProps> = ({ onAction, onShowFeedb
 
     try {
       const result = await getBiocontrolExpertAdvice(query);
-      setAdvice(result);
+      setAdvice(result || null);
 
       if (result) {
         playTTS(result);
