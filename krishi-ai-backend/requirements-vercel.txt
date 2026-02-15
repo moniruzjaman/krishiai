@@ -1,7 +1,6 @@
 # Core Framework
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
-python-multipart>=0.0.6
 
 # Supabase
 supabase>=2.3.4
@@ -24,3 +23,6 @@ passlib[bcrypt]>=1.7.4
 
 # Firebase
 firebase-admin>=6.5.0
+
+# LLM Reasoning
+openai>=1.12.0
