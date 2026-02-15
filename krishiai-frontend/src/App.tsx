@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext, createContext } from "react";
-import { View, User, SavedReport, Language } from "./types";
+import React, { useState, useEffect } from "react";
+import { View, User, SavedReport, Language, UserRole } from "./types";
 import { Hero } from "./components/Hero";
 import ToolsHub from "./components/ToolsHub";
 import ChatBot from "./components/ChatBot";
@@ -28,11 +28,10 @@ import CropCalendar from "./components/CropCalendar";
 import AgriPodcast from "./components/AgriPodcast";
 import CABIDiagnosisTraining from "./components/CABIDiagnosisTraining";
 import FieldMap from "./components/FieldMap";
-import AnalyticsDashboard from "./components/AnalyticsDashboard";
+import Sidebar from "./components/Sidebar";
 import { WeatherHorizontal } from "./components/WeatherHorizontal";
 import { MarketPriceHorizontal } from "./components/MarketPriceHorizontal";
 import { FeatureHighlights } from "./components/FeatureHighlights";
-import { PermissionHub } from "./components/PermissionHub";
 import {
 	NewsTicker,
 	StatsSection,
@@ -40,48 +39,45 @@ import {
 	MissionSection,
 	ContactFooter,
 } from "./components/HomeSections";
-import {
-	generateSpeech,
-	decodeBase64,
-	decodeAudioData,
-} from "./services/ai/geminiService";
 import { Logo } from "./components/Logo";
 import { FarmerAvatar } from "./components/FarmerAvatar";
 import ShareDialog from "./components/ShareDialog";
 import {
 	syncUserProfile,
 	saveReportToSupabase,
+	getOrCreateUser,
+	fetchUserReports,
 } from "./services/utils/supabase";
 
 interface SpeechContextType {
-	playSpeech: (text: string, audioBase64?: string) => Promise<void>;
+	playSpeech: (text: string, audioBase64?: string) => void;
 	stopSpeech: () => void;
 	isSpeaking: boolean;
 	speechEnabled: boolean;
 	setSpeechEnabled: (enabled: boolean) => void;
 }
 
-const SpeechContext = createContext<SpeechContextType | null>(null);
+const SpeechContext = React.createContext<SpeechContextType | null>(null);
 
 export const useSpeech = () => {
-	const context = useContext(SpeechContext);
+	const context = React.useContext(SpeechContext);
 	if (!context)
 		throw new Error("useSpeech must be used within a SpeechProvider");
 	return context;
 };
 
 const App: React.FC = () => {
+	return <AppContent />;
+};
+
+const AppContent: React.FC = () => {
 	const [currentView, setCurrentView] = useState<View>(View.HOME);
 	const [lang, setLang] = useState<Language>("bn");
-	const [handledPermissions, setHandledPermissions] = useState(() => {
-		return (
-			localStorage.getItem("agritech_permissions_granted") === "true" ||
-			localStorage.getItem("agritech_permissions_skipped") === "true"
-		);
-	});
 	const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 	const [isShareOpen, setIsShareOpen] = useState(false);
+	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 	const [installPrompt, setInstallPrompt] = useState<any>(null);
+	const [showSpeechConsent, setShowSpeechConsent] = useState(false);
 
 	const [user, setUser] = useState<User>({
 		uid: "guest_user_" + Math.random().toString(36).substr(2, 5),
@@ -100,90 +96,124 @@ const App: React.FC = () => {
 		settings: {
 			theme: "light",
 			notifications: { weather: true, market: true, cropHealth: true },
-			modelProvider: "gemini",
-			aiStrategy: "cost",
 		},
 	});
 
-	const [speechEnabled, setSpeechEnabled] = useState(true);
+	const [speechEnabled, setSpeechEnabled] = useState(false);
 	const [isSpeaking, setIsSpeaking] = useState(false);
-	const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
-	const [currentSource, setCurrentSource] =
-		useState<AudioBufferSourceNode | null>(null);
 
-	// Auto-sync user data to Supabase when profile changes
+	// NOTE: Moving hooks here for cleaner structure
 	useEffect(() => {
-		if (user.uid) {
-			syncUserProfile(user);
+		if (typeof window !== "undefined" && window.speechSynthesis) {
+			window.speechSynthesis.getVoices();
+			window.speechSynthesis.onvoiceschanged = () => {
+				window.speechSynthesis.getVoices();
+			};
 		}
-	}, [user.displayName, user.role, user.progress, user.farmLocation]);
+
+		const consent = localStorage.getItem("agritech_speech_consent");
+		if (consent === "true") {
+			setSpeechEnabled(true);
+		} else if (consent === null) {
+			setTimeout(() => setShowSpeechConsent(true), 1500);
+		}
+
+		// Improved user initialization with error handling
+		const initializeUser = async () => {
+			try {
+				let deviceId = localStorage.getItem("krishi_ai_device_id");
+				if (!deviceId) {
+					deviceId = "user_" + Math.random().toString(36).substr(2, 9);
+					localStorage.setItem("krishi_ai_device_id", deviceId);
+				}
+
+				const supabaseUser = await getOrCreateUser(deviceId);
+				if (supabaseUser && supabaseUser.uid) {
+					// Asynchronously fetch the user's saved reports from Supabase
+					let userReports: SavedReport[] = [];
+					try {
+						userReports = (await fetchUserReports(supabaseUser.uid)) ?? [];
+					} catch (reportError) {
+						console.warn("Failed to fetch user reports:", reportError);
+					}
+					setUser({ ...supabaseUser, savedReports: userReports });
+				} else {
+					console.warn("Failed to create or retrieve user from Supabase");
+				}
+			} catch (error) {
+				console.error("Error during user initialization:", error);
+			}
+		};
+
+		initializeUser();
+	}, []);
 
 	useEffect(() => {
 		const handleBeforeInstallPrompt = (e: any) => {
 			e.preventDefault();
 			setInstallPrompt(e);
 		};
-
-		const handleGlobalNavigate = (e: any) => {
-			if (e.detail) handleNavigate(e.detail as View);
-		};
-
 		window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-		window.addEventListener("agritech_navigate", handleGlobalNavigate);
-
-		return () => {
+		return () =>
 			window.removeEventListener(
 				"beforeinstallprompt",
 				handleBeforeInstallPrompt,
 			);
-			window.removeEventListener("agritech_navigate", handleGlobalNavigate);
-		};
 	}, []);
 
 	const stopSpeech = () => {
-		if (currentSource) {
-			currentSource.stop();
-			setCurrentSource(null);
+		if (window.speechSynthesis) {
+			window.speechSynthesis.cancel();
 		}
 		setIsSpeaking(false);
 	};
 
-	const playSpeech = async (text: string, audioBase64?: string) => {
-		if (!speechEnabled) return;
-		stopSpeech();
+	const playSpeech = (text: string, audioBase64?: string) => {
+		if (!speechEnabled || !window.speechSynthesis || !text) return;
 
-		try {
-			setIsSpeaking(true);
-			const ctx =
-				audioCtx ||
-				new (window.AudioContext || (window as any).webkitAudioContext)({
-					sampleRate: 24000,
-				});
-			if (!audioCtx) setAudioCtx(ctx);
-			if (ctx.state === "suspended") await ctx.resume();
+		window.speechSynthesis.cancel();
+		setIsSpeaking(false);
 
-			let base64 = audioBase64;
-			if (!base64) {
-				base64 = await generateSpeech(text.replace(/[*#_~]/g, ""));
-			}
+		setTimeout(() => {
+			const cleanText = text.replace(/[*#_~]/g, "").trim();
+			if (!cleanText) return;
 
-			const buffer = await decodeAudioData(decodeBase64(base64), ctx, 24000, 1);
-			const source = ctx.createBufferSource();
-			source.buffer = buffer;
-			source.connect(ctx.destination);
-			source.onended = () => setIsPlayingState(false);
-			source.start(0);
-			setCurrentSource(source);
-		} catch (e) {
-			console.error("Speech Error:", e);
-			setIsSpeaking(false);
-		}
+			const utterance = new SpeechSynthesisUtterance(cleanText);
+			utterance.lang = lang === "bn" ? "bn-BD" : "en-US";
+			utterance.rate = 0.95;
+			utterance.pitch = 1.0;
+
+			const voices = window.speechSynthesis.getVoices();
+			const targetLang = lang === "bn" ? "bn" : "en";
+			const preferredVoice = voices.find((v) =>
+				v.lang.toLowerCase().includes(targetLang),
+			);
+			if (preferredVoice) utterance.voice = preferredVoice;
+
+			utterance.onstart = () => setIsSpeaking(true);
+			utterance.onend = () => setIsSpeaking(false);
+			utterance.onerror = (event) => {
+				if (event.error !== "interrupted") {
+					console.warn("Native Speech Warning:", event.error);
+				}
+				setIsSpeaking(false);
+			};
+
+			window.speechSynthesis.speak(utterance);
+		}, 100);
 	};
 
-	const setIsPlayingState = (val: boolean) => {
-		// Fix: Changed non-existent setIsPlaying to setIsSpeaking to resolve compilation error.
-		setIsSpeaking(val);
-		if (!val) setCurrentSource(null);
+	const handleSpeechConsent = (enabled: boolean) => {
+		setSpeechEnabled(enabled);
+		localStorage.setItem("agritech_speech_consent", enabled.toString());
+		setShowSpeechConsent(false);
+		if (enabled) {
+			playSpeech(
+				lang === "bn"
+					? "ভয়েস সার্ভিস চালু করা হয়েছে। আপনাকে ধন্যবাদ।"
+					: "Voice service enabled. Thank you.",
+			);
+		}
 	};
 
 	const handleNavigate = (view: View) => {
@@ -194,7 +224,7 @@ const App: React.FC = () => {
 	};
 
 	const handleAction = (xp: number) => {
-		setUser((prev) => ({
+		setUser((prev: User) => ({
 			...prev,
 			progress: {
 				...prev.progress,
@@ -203,6 +233,18 @@ const App: React.FC = () => {
 			},
 		}));
 	};
+
+	useEffect(() => {
+		if (user.uid && !user.uid.startsWith("guest_user_")) {
+			syncUserProfile(user);
+		}
+	}, [
+		user.displayName,
+		user.role,
+		user.farmLocation,
+		user.progress,
+		user.preferredCategories,
+	]);
 
 	const handleSaveReport = async (
 		report: Omit<SavedReport, "id" | "timestamp">,
@@ -213,7 +255,7 @@ const App: React.FC = () => {
 			timestamp: Date.now(),
 		};
 
-		setUser((prev) => ({
+		setUser((prev: User) => ({
 			...prev,
 			savedReports: [newReport, ...prev.savedReports],
 		}));
@@ -224,18 +266,10 @@ const App: React.FC = () => {
 	};
 
 	useEffect(() => {
-		if (!import.meta.env.VITE_API_KEY) {
-			console.error("ENVIRONMENT ERROR: VITE_API_KEY is missing. Check .env!");
-		}
 		const onGlobalNav = (e: any) => handleNavigate(e.detail as View);
-		const onSaveReportEvent = (e: any) => handleSaveReport(e.detail);
 		window.addEventListener("agritech_navigate", onGlobalNav);
-		window.addEventListener("agritech_save_report", onSaveReportEvent);
-		return () => {
-			window.removeEventListener("agritech_navigate", onGlobalNav);
-			window.removeEventListener("agritech_save_report", onSaveReportEvent);
-		};
-	}, [user.uid]);
+		return () => window.removeEventListener("agritech_navigate", onGlobalNav);
+	}, []);
 
 	const renderView = () => {
 		switch (currentView) {
@@ -243,7 +277,7 @@ const App: React.FC = () => {
 				return (
 					<div className="animate-fade-in space-y-0">
 						<Hero onNavigate={handleNavigate} lang={lang} />
-						<div className="max-w-7xl mx-auto px-4 -mt-16 sm:-mt-24 relative z-[100] space-y-8 pb-12">
+						<div className="max-w-7xl mx-auto px-4 -mt-16 relative z-50 space-y-8 pb-12">
 							<WeatherHorizontal lang={lang} />
 							<MarketPriceHorizontal onNavigate={handleNavigate} lang={lang} />
 							<NewsTicker lang={lang} />
@@ -265,7 +299,6 @@ const App: React.FC = () => {
 						userCrops={user.myCrops}
 						onBack={() => handleNavigate(View.HOME)}
 						onAction={() => handleAction(20)}
-						userSettings={user.settings}
 					/>
 				);
 			case View.SEARCH:
@@ -274,7 +307,6 @@ const App: React.FC = () => {
 						onBack={() => handleNavigate(View.HOME)}
 						onAction={() => handleAction(10)}
 						onSaveReport={handleSaveReport}
-						userSettings={user.settings}
 					/>
 				);
 			case View.ANALYZER:
@@ -287,7 +319,6 @@ const App: React.FC = () => {
 						userCrops={user.myCrops}
 						onNavigate={handleNavigate}
 						lang={lang}
-						userSettings={user.settings}
 					/>
 				);
 			case View.WEATHER:
@@ -400,8 +431,8 @@ const App: React.FC = () => {
 				return (
 					<UserProfile
 						user={user}
-						onUpdateUser={(updates) =>
-							setUser((prev) => ({ ...prev, ...updates }))
+						onUpdateUser={(updates: Partial<User>) =>
+							setUser((prev: User) => ({ ...prev, ...updates }))
 						}
 						onSaveReport={handleSaveReport}
 						onToggleSpeech={() => setSpeechEnabled(!speechEnabled)}
@@ -455,7 +486,6 @@ const App: React.FC = () => {
 					<CABIDiagnosisTraining
 						onBack={() => handleNavigate(View.HOME)}
 						onAction={() => handleAction(100)}
-						onSaveReport={handleSaveReport}
 						lang={lang}
 						user={user}
 					/>
@@ -464,27 +494,10 @@ const App: React.FC = () => {
 				return (
 					<FieldMap onBack={() => handleNavigate(View.HOME)} lang={lang} />
 				);
-			case View.ANALYTICS:
-				return (
-					<AnalyticsDashboard
-						userId={user.uid}
-						onBack={() => handleNavigate(View.PROFILE)}
-						lang={lang}
-					/>
-				);
 			default:
 				return <Hero onNavigate={handleNavigate} lang={lang} />;
 		}
 	};
-
-	if (!handledPermissions) {
-		return (
-			<PermissionHub
-				lang={lang}
-				onComplete={() => setHandledPermissions(true)}
-			/>
-		);
-	}
 
 	return (
 		<SpeechContext.Provider
@@ -497,8 +510,60 @@ const App: React.FC = () => {
 			}}
 		>
 			<div
-				className={`min-h-screen transition-colors duration-500 ${user.settings?.theme === "dark" ? "dark bg-slate-950 text-white" : "bg-slate-50 text-slate-900"}`}
+				className={`min-h-screen transition-colors duration-500 ${user.settings?.theme === "dark" ? "dark bg-slate-950" : "bg-slate-50"}`}
 			>
+				<Sidebar
+					isOpen={isDrawerOpen}
+					onClose={() => setIsDrawerOpen(false)}
+					onNavigate={handleNavigate}
+					currentView={currentView}
+					lang={lang}
+				/>
+
+				{showSpeechConsent && (
+					<div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+						{/* ... (existing speech consent modal content) ... */}
+						<div className="bg-white rounded-[3rem] p-10 max-w-md shadow-2xl space-y-8 border-t-[12px] border-emerald-600 relative overflow-hidden">
+							<div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
+							<div className="flex items-center space-x-4 relative z-10">
+								<div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center text-4xl shadow-inner">
+									🔊
+								</div>
+								<h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none">
+									Enable Read Aloud?
+								</h3>
+							</div>
+							<div className="space-y-4 relative z-10">
+								<p className="text-slate-600 font-medium leading-relaxed">
+									This app can read important information aloud using your
+									device’s built-in voice. Useful for accessibility and
+									hands-free use.
+								</p>
+								<ul className="space-y-3">
+									<li className="flex items-center space-x-3 text-sm font-black text-slate-700">
+										<span className="text-emerald-500 text-lg">✔</span>
+										<span>Uses your phone’s voice (no internet required)</span>
+									</li>
+								</ul>
+							</div>
+							<div className="flex flex-col gap-3 relative z-10">
+								<button
+									onClick={() => handleSpeechConsent(true)}
+									className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all border-b-4 border-emerald-800"
+								>
+									Enable Read Aloud
+								</button>
+								<button
+									onClick={() => handleSpeechConsent(false)}
+									className="w-full bg-slate-100 text-slate-400 py-4 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all"
+								>
+									Not Now
+								</button>
+							</div>
+						</div>
+					</div>
+				)}
+
 				{isShareOpen && (
 					<ShareDialog
 						isOpen={isShareOpen}
@@ -523,89 +588,12 @@ const App: React.FC = () => {
 					/>
 				)}
 
-				<div
-					className={`fixed inset-0 z-[1000] pointer-events-none ${isDrawerOpen ? "pointer-events-auto" : ""}`}
-				>
-					<div
-						className={`absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity duration-500 ${isDrawerOpen ? "opacity-100" : "opacity-0"}`}
-						onClick={() => setIsDrawerOpen(false)}
-					></div>
-					<div
-						className={`absolute top-0 left-0 bottom-0 w-[85%] max-w-sm bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 transform ${isDrawerOpen ? "translate-x-0" : "-translate-x-full"} overflow-y-auto`}
-					>
-						<div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-emerald-600">
-							<Logo size="md" showText style={{ color: "white" }} />
-							<button
-								onClick={() => setIsDrawerOpen(false)}
-								className="p-2 bg-white/20 rounded-xl text-white"
-							>
-								✕
-							</button>
-						</div>
-						<div className="p-6 space-y-8">
-							<DrawerSection
-								title={lang === "bn" ? "প্রধান মেনু" : "Main Menu"}
-							>
-								<DrawerItem
-									icon="🏠"
-									label={lang === "bn" ? "হোম স্ক্রিন" : "Home"}
-									onClick={() => handleNavigate(View.HOME)}
-									active={currentView === View.HOME}
-								/>
-								<DrawerItem
-									icon="👤"
-									label={lang === "bn" ? "আমার প্রোফাইল" : "Profile"}
-									onClick={() => handleNavigate(View.PROFILE)}
-									active={currentView === View.PROFILE}
-								/>
-								<DrawerItem
-									icon="🛠️"
-									label={lang === "bn" ? "সকল টুলস" : "All Tools"}
-									onClick={() => handleNavigate(View.TOOLS)}
-									active={currentView === View.TOOLS}
-								/>
-								<DrawerItem
-									icon="🎓"
-									label={lang === "bn" ? "শিখন কেন্দ্র" : "Learning Center"}
-									onClick={() => handleNavigate(View.LEARNING_CENTER)}
-									active={currentView === View.LEARNING_CENTER}
-								/>
-							</DrawerSection>
-							<DrawerSection
-								title={
-									lang === "bn" ? "বিশেষজ্ঞ ডায়াগনোসিস" : "Expert Diagnosis"
-								}
-							>
-								<DrawerItem
-									icon="📸"
-									label={lang === "bn" ? "এআই স্ক্যানার" : "AI Scanner"}
-									onClick={() => handleNavigate(View.ANALYZER)}
-									active={currentView === View.ANALYZER}
-								/>
-								<DrawerItem
-									icon="🧪"
-									label={
-										lang === "bn" ? "বালাইনাশক বিশেষজ্ঞ" : "Pesticide Expert"
-									}
-									onClick={() => handleNavigate(View.PEST_EXPERT)}
-									active={currentView === View.PEST_EXPERT}
-								/>
-								<DrawerItem
-									icon="🔬"
-									label={lang === "bn" ? "CABI ট্রেনিং" : "CABI Training"}
-									onClick={() => handleNavigate(View.CABI_TRAINING)}
-									active={currentView === View.CABI_TRAINING}
-								/>
-							</DrawerSection>
-						</div>
-					</div>
-				</div>
-
 				<header className="fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 z-[100] px-4 flex items-center justify-between shadow-sm">
 					<div className="flex items-center space-x-3">
 						<button
 							onClick={() => setIsDrawerOpen(true)}
-							className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-emerald-50 transition-colors"
+							aria-label="Open menu"
+							className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-emerald-50 transition-all active:scale-90 shadow-sm border border-slate-100 dark:border-slate-700"
 						>
 							<svg
 								className="w-6 h-6 text-slate-800 dark:text-white"
@@ -634,9 +622,17 @@ const App: React.FC = () => {
 
 					<div className="flex items-center space-x-2 md:space-x-4">
 						<button
-							onClick={() => setIsShareOpen(true)}
+							onClick={() => setIsSettingsOpen(true)}
 							className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-emerald-50 transition-all active:scale-90 border border-transparent hover:border-emerald-200"
-							title="Share & Install"
+							title="AI Settings"
+						>
+							<span className="text-xl">⚙️</span>
+						</button>
+
+						<button
+							onClick={() => setIsShareOpen(true)}
+							aria-label="Share"
+							className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-emerald-50 transition-all active:scale-90 border border-transparent hover:border-emerald-200"
 						>
 							<svg
 								className="w-5 h-5 text-slate-600 dark:text-slate-300"
@@ -659,7 +655,6 @@ const App: React.FC = () => {
 								setSpeechEnabled(!speechEnabled);
 							}}
 							className={`p-2.5 rounded-xl transition-all flex items-center space-x-2 border shadow-sm active:scale-95 ${speechEnabled ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-slate-50 border-slate-100 text-slate-400"}`}
-							title={speechEnabled ? "Mute Read Aloud" : "Enable Read Aloud"}
 						>
 							<div className="relative">
 								{speechEnabled ? (
@@ -695,21 +690,18 @@ const App: React.FC = () => {
 									<span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
 								)}
 							</div>
-							<span className="text-[10px] font-black uppercase hidden sm:block">
-								{speechEnabled ? "Read On" : "Read Off"}
-							</span>
 						</button>
 
 						<div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-full flex items-center space-x-1 border border-slate-200 dark:border-slate-700">
 							<button
 								onClick={() => setLang("bn")}
-								className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${lang === "bn" ? "bg-emerald-600 text-white shadow-lg" : "text-slate-400 dark:text-slate-500 hover:text-emerald-500"}`}
+								className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${lang === "bn" ? "bg-emerald-600 text-white shadow-lg" : "text-slate-400 dark:text-slate-500"}`}
 							>
 								বাংলা
 							</button>
 							<button
 								onClick={() => setLang("en")}
-								className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${lang === "en" ? "bg-emerald-600 text-white shadow-lg" : "text-slate-400 dark:text-slate-500 hover:text-emerald-500"}`}
+								className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${lang === "en" ? "bg-emerald-600 text-white shadow-lg" : "text-slate-400 dark:text-slate-500"}`}
 							>
 								EN
 							</button>
@@ -746,9 +738,6 @@ const App: React.FC = () => {
 						>
 							📸
 						</button>
-						<p className="text-[7px] font-black uppercase text-center mt-2 tracking-widest text-emerald-600 dark:text-emerald-400">
-							{lang === "bn" ? "এআই স্ক্যান" : "AI Scan"}
-						</p>
 					</div>
 					<NavButton
 						active={currentView === View.LEARNING_CENTER}
@@ -767,25 +756,6 @@ const App: React.FC = () => {
 		</SpeechContext.Provider>
 	);
 };
-
-const DrawerSection = ({ title, children }: any) => (
-	<div className="space-y-3">
-		<h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-			{title}
-		</h4>
-		<div className="grid grid-cols-1 gap-2">{children}</div>
-	</div>
-);
-
-const DrawerItem = ({ icon, label, onClick, active }: any) => (
-	<button
-		onClick={onClick}
-		className={`flex items-center space-x-4 p-4 rounded-2xl transition-all ${active ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 shadow-sm" : "hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"}`}
-	>
-		<span className="text-xl">{icon}</span>
-		<span className="font-bold text-sm">{label}</span>
-	</button>
-);
 
 const NavButton = ({ active, icon, label, onClick }: any) => (
 	<button

@@ -2,12 +2,15 @@
 API Routes for Krishi AI Backend
 """
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
-from app.models import *
-from app.database import supabase_client
-from typing import List, Dict, Any, Optional
 import base64
 import logging
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+
+from app.database import supabase_client
+from app.models import *
+from app.services.firebase_service import get_firebase_service
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +43,62 @@ def get_local_ai_service():
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "Krishi AI Backend"}
+
+
+# Firebase Authentication Routes
+@router.post("/auth/verify-token")
+async def verify_firebase_token(request: Dict[str, str]):
+    """Verify Firebase ID token"""
+    try:
+        token = request.get("token")
+        if not token:
+            raise HTTPException(status_code=400, detail="Token is required")
+
+        firebase_service = get_firebase_service()
+        user = firebase_service.verify_token(token)
+
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        return {
+            "verified": True,
+            "user_id": user.uid,
+            "email": user.email,
+            "display_name": user.display_name,
+        }
+    except Exception as e:
+        logger.error(f"Error verifying token: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/auth/create-user")
+async def create_firebase_user(request: Dict[str, str]):
+    """Create a new user in Firebase Authentication"""
+    try:
+        email = request.get("email")
+        password = request.get("password")
+        display_name = request.get("display_name", "")
+
+        if not email or not password:
+            raise HTTPException(
+                status_code=400, detail="Email and password are required"
+            )
+
+        firebase_service = get_firebase_service()
+        user = firebase_service.create_user(email, password, display_name)
+
+        if not user:
+            raise HTTPException(status_code=400, detail="Failed to create user")
+
+        return {
+            "success": True,
+            "user_id": user.uid,
+            "email": user.email,
+            "display_name": user.display_name,
+        }
+    except Exception as e:
+        logger.error(f"Error creating user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # User Routes

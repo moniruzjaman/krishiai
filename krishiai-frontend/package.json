@@ -7,7 +7,9 @@
 		"dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 vite",
 		"build": "tsc && vite build",
 		"preview": "vite preview",
-		"backend": "python main.py"
+		"backend": "python main.py",
+		"deploy": "npm run build && firebase deploy --only hosting",
+		"vercel-build": "npm run build"
 	},
 	"dependencies": {
 		"@google/genai": "^1.35.0",

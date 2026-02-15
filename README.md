@@ -1,160 +1,175 @@
 # Krishi AI - Agricultural Intelligence Platform
 
-A comprehensive AI-powered agricultural platform combining crop disease diagnosis, market insights, and farmer training tools.
+Krishi AI is a comprehensive agricultural intelligence platform that leverages artificial intelligence to provide crop disease diagnosis, agricultural advisory services, weather information, and market price tracking. The application supports both Bangla and English languages to serve farmers effectively.
 
-## 🌾 Project Structure
+## 🌾 Features
 
-This is a monorepo containing:
+- Crop disease diagnosis using AI
+- Agricultural advisory services
+- Weather information
+- Market price tracking
+- Multilingual support (Bangla/English)
+- User authentication via Firebase
+- Real-time chat functionality
+- Push notifications
+- Nutrient calculator
+- Pesticide expert guidance
+- Soil expert advice
+- Yield prediction
 
-- **`krishiai-frontend/`** - React + TypeScript frontend application
-- **`krishi-ai-backend/`** - FastAPI Python backend service
-- **`directives/`** - Standard Operating Procedures (SOPs) in Markdown
-- **`execution/`** - Deterministic Python automation scripts
+## 🛠️ Tech Stack
 
-## 🚀 Quick Start
+- **Frontend**: React, TypeScript, Tailwind CSS
+- **Backend**: FastAPI, Python
+- **AI/ML**: Google GenAI, Hugging Face Transformers
+- **Authentication**: Firebase Auth
+- **Database**: Supabase (PostgreSQL)
+- **Real-time**: Firebase Realtime Database
+- **Hosting**: Vercel (Frontend), Vercel/Render/Heroku (Backend)
+- **Push Notifications**: Firebase Cloud Messaging
 
-### Frontend Setup
+## 🚀 Deployment with Vercel
 
+### Prerequisites
+
+1. Install Vercel CLI:
 ```bash
-cd krishiai-frontend
-npm install
-npm run dev
+npm install -g vercel
 ```
 
-The frontend will be available at `http://localhost:5173`
+2. Login to Vercel:
+```bash
+vercel login
+```
 
-### Backend Setup
+3. Install project dependencies:
+```bash
+# Frontend
+cd krishiai-frontend
+npm install
 
+# Backend
+cd ../krishi-ai-backend
+pip install -r requirements.txt
+```
+
+### Environment Configuration
+
+#### Frontend Environment Variables
+
+Create a `.env` file in the frontend directory with the following variables:
+
+```env
+# Firebase Configuration
+VITE_FIREBASE_API_KEY=AIzaSyCSjp8WdJYoomXdgleRiACwn-D2p3j1pQM
+VITE_FIREBASE_AUTH_DOMAIN=agriadvisoryai.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=agriadvisoryai
+VITE_FIREBASE_STORAGE_BUCKET=agriadvisoryai.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=498163867458
+VITE_FIREBASE_APP_ID=1:498163867458:web:d53de085f0f56acbc472db
+
+# Supabase Configuration
+VITE_SUPABASE_URL=https://nmngzjrrysjzuxfcklrk.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tbmd6anJyeXNqenV4ZmNrbHJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDY3MDA4MTUsImV4cCI6MjAyMjI3NjgxNX0.SLDiC6uj7f8U-MTS4kqNgd650n4w7rLz4J7wL7wL7wL
+
+# Backend API
+VITE_BACKEND_URL=https://your-backend-url.vercel.app
+```
+
+#### Backend Environment Variables
+
+For the backend, you'll need:
+
+```env
+# Supabase
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_service_role_key
+
+# Google AI
+GEMINI_API_KEY=your_gemini_api_key
+
+# Firebase (for backend services)
+FIREBASE_CREDENTIALS_PATH=/path/to/serviceAccountKey.json
+# OR
+FIREBASE_CONFIG='{"type": "service_account", ...}' # JSON string of service account
+
+# App Configuration
+DEBUG=False
+HOST=0.0.0.0
+PORT=8000
+</env>
+
+### Deploy Frontend to Vercel
+
+1. Navigate to the frontend directory:
+```bash
+cd krishiai-frontend
+```
+
+2. Deploy to Vercel:
+```bash
+vercel --prod
+```
+
+3. Follow the prompts to configure your project settings
+
+### Deploy Backend to Vercel
+
+1. Navigate to the backend directory:
 ```bash
 cd krishi-ai-backend
-python -m venv venv
-# On Windows:
-.\venv\Scripts\activate
-# On Unix/MacOS:
-source venv/bin/activate
+```
 
-pip install -r requirements.txt
+2. Deploy to Vercel:
+```bash
+vercel --prod
+```
+
+3. Set the required environment variables in the Vercel dashboard
+
+4. **IMPORTANT**: After deployment, you need to disable Vercel's deployment protection:
+   - Go to your Vercel dashboard (https://vercel.com/dashboard)
+   - Select the "krishi-ai-backend" project
+   - Navigate to Settings → General → Deployment Protection
+   - Turn OFF "Enable Protection" to make the API publicly accessible
+   - This is required for the frontend to communicate with the backend API
+
+## 🏗️ Development Setup
+
+To run the application locally:
+
+1. Start the backend:
+```bash
+cd krishi-ai-backend
 uvicorn app.main:app --reload
 ```
 
-The backend API will be available at `http://localhost:8000`
-
-## 🔧 Environment Configuration
-
-### Frontend Environment Variables
-
-Create `.env.local` in `krishiai-frontend/`:
-
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_GEMINI_API_KEY=your_gemini_api_key
-VITE_BACKEND_URL=http://localhost:8000
-```
-
-### Backend Environment Variables
-
-Create `.env` in `krishi-ai-backend/`:
-
-```env
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_service_key
-GEMINI_API_KEY=your_gemini_api_key
-ENVIRONMENT=development
-```
-
-## 📦 Tech Stack
-
-### Frontend
-
-- **React 19** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool
-- **Supabase** - Database & authentication
-- **Google Gemini AI** - AI capabilities
-- **Recharts** - Data visualization
-
-### Backend
-
-- **FastAPI** - Modern Python web framework
-- **Supabase** - Database client
-- **Google Gemini AI** - AI processing
-- **Transformers** - Local AI models
-- **Pillow** - Image processing
-
-## 🏗️ Architecture
-
-The project follows a **3-Layer Architecture**:
-
-1. **Directive Layer** - Natural language SOPs defining workflows
-2. **Orchestration Layer** - Intelligent routing and decision-making
-3. **Execution Layer** - Deterministic Python scripts for reliable operations
-
-## 🌟 Key Features
-
-- 🔍 **Crop Disease Diagnosis** - AI-powered plant health analysis
-- 📊 **Market Intelligence** - Real-time agricultural market prices
-- 🎓 **CABI Training** - Interactive farmer education modules
-- 🌤️ **Weather Integration** - Location-based weather forecasts
-- 💬 **AI Assistant** - Conversational agricultural advisor
-- 📱 **Responsive Design** - Mobile-first interface
-
-## 🧪 Testing
-
-### Frontend Testing
-
+2. Start the frontend:
 ```bash
 cd krishiai-frontend
-npm run build  # Verify TypeScript compilation
+npm run dev
 ```
 
-### Backend Testing
+## 🔧 Architecture
 
-```bash
-cd krishi-ai-backend
-python -m pytest  # Run tests (if configured)
-```
+The application follows a hybrid backend architecture:
+- **Firebase**: Handles user authentication, real-time features, and push notifications
+- **Supabase**: Manages structured data like crop diagnosis reports and user profiles
+- **Google GenAI**: Powers the AI-driven agricultural insights
 
-## 📝 Development Workflow
+## 📱 Production Build
 
-1. Check `directives/` for relevant SOPs before implementing features
-2. Use scripts in `execution/` for deterministic operations
-3. Update directives when discovering new patterns or constraints
-4. Follow the self-annealing loop: Fix → Update → Test → Document
-
-## 🚢 Deployment
-
-### Frontend (Vercel)
-
-The frontend is configured for Vercel deployment with `vercel.json`.
+To create a production build of the frontend:
 
 ```bash
 cd krishiai-frontend
 npm run build
-vercel deploy
 ```
-
-### Backend (Vercel/Railway/Render)
-
-The backend can be deployed to various platforms. See `vercel.json` for Vercel configuration.
-
-```bash
-cd krishi-ai-backend
-# Deploy using your preferred platform
-```
-
-## 📄 License
-
-Private project - All rights reserved
 
 ## 🤝 Contributing
 
-This is a private project. For collaboration inquiries, please contact the project maintainer.
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-## 📞 Support
+## 📄 License
 
-For issues or questions, please refer to the project documentation in `docs/` or contact the development team.
-
----
-
-### Built with ❤️ for farmers and agricultural communities
+This project is licensed under the MIT License.
