@@ -651,7 +651,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 									if (file) {
 										const reader = new FileReader();
 										reader.onloadend = () => {
-											SelectedMedia(reader.result as string);
+											setSelectedMedia(reader.result as string);
 											setMimeType(file.type);
 											setPrecisionFields(null);
 											setResult(null);

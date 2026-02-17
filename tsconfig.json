@@ -17,5 +17,16 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["./**/*.ts", "./**/*.tsx"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "project_backup",
+    "krishiai-frontend",
+    "**/*.bak",
+    ".vercel",
+    ".github",
+    ".tmp",
+    ".venv"
+  ]
 }
