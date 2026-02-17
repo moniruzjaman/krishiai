@@ -5,6 +5,7 @@
   "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
@@ -28,5 +29,10 @@
   ],
   "env": {
     "NODE_VERSION": "20"
+  },
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 10
+    }
   }
 }
