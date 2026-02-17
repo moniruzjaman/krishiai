@@ -15,11 +15,9 @@ import DynamicPrecisionForm from "./DynamicPrecisionForm";
 import { useSpeech } from "../App";
 import GuidedTour, { TourStep } from "./GuidedTour";
 import { ToolGuideHeader } from "./ToolGuideHeader";
-import MonitoringDashboard from "./MonitoringDashboard";
 
-// Import cost-aware analyzer and monitoring
+// Import cost-aware analyzer
 import { costAwareAnalyzer, quotaManager } from "../services/modelService";
-import { monitoringService } from "../services/monitoringService";
 
 // Keep legacy imports for now (to be migrated later)
 import {
@@ -85,7 +83,6 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 	const [weather, setWeather] = useState<WeatherData | null>(null);
 	const [isLiveMode, setIsLiveMode] = useState(false);
 	const [showFlash, setShowFlash] = useState(false);
-	const [showMonitoring, setShowMonitoring] = useState(false);
 
 	const { playSpeech, stopSpeech, isSpeaking, speechEnabled } = useSpeech();
 	const [cropFamily, setCropFamily] = useState<string>("ধান");
@@ -245,16 +242,6 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 					);
 					setResult(analysis);
 					if (speechEnabled) playSpeech(analysis.fullText);
-
-					// Log to monitoring
-					monitoringService.logAnalysis({
-						modelUsed: analysis.officialSource,
-						tier: 'low-cost',
-						confidence: analysis.confidence,
-						responseTime: Date.now() - analysisStartTime,
-						cropFamily,
-						diagnosis: analysis.diagnosis
-					});
 				} else {
 					setPrecisionFields(fields);
 				}
@@ -278,32 +265,9 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 
 				// Record usage for quota management
 				quotaManager.recordUsage(analysis.officialSource.includes('Gemini') ? 'gemini-3-flash-preview' : 'meta-llama/llama-3.1-8b-chat');
-
-				// Log to monitoring
-				const tier = analysis.officialSource.includes('Hugging Face') ? 'free' :
-				             analysis.officialSource.includes('OpenRouter') ? 'low-cost' : 'premium';
-
-				monitoringService.logAnalysis({
-					modelUsed: analysis.officialSource,
-					tier: tier as any,
-					confidence: analysis.confidence,
-					responseTime: Date.now() - analysisStartTime,
-					cropFamily,
-					diagnosis: analysis.diagnosis
-				});
 			}
 		} catch (error: any) {
 			console.error("Analysis Error:", error);
-			// Log error to monitoring
-			monitoringService.logAnalysis({
-				modelUsed: 'error',
-				tier: 'free',
-				confidence: 0,
-				responseTime: Date.now() - startTime,
-				cropFamily,
-				diagnosis: 'Error',
-				error: error.message
-			});
 			if (
 				error.message.includes("fallback") ||
 				error.message.includes("OpenRouter")
@@ -496,20 +460,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 								"All advisories follow BARI/BRRI plant protection protocols.",
 							]
 				}
-			>
-				{/* Monitoring Dashboard Button */}
-				<button
-					onClick={() => setShowMonitoring(true)}
-					className="absolute top-4 right-4 p-2 bg-slate-100 hover:bg-emerald-50 rounded-xl transition-colors"
-					title="View Monitoring Dashboard"
-				>
-					<span className="text-xl">📊</span>
-				</button>
-			</ToolGuideHeader>
-
-			{showMonitoring && (
-				<MonitoringDashboard onClose={() => setShowMonitoring(false)} />
-			)}
+			/>
 
 			<div className="bg-white rounded-[3rem] p-6 md:p-10 shadow-xl border border-slate-100 mb-8 print:hidden">
 				<div className="space-y-6 mb-10">
