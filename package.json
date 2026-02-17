@@ -1,4 +1,3 @@
-
 {
   "name": "krishi-ai-v2",
   "private": true,
@@ -7,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "vercel --prod",
+    "deploy:preview": "vercel",
+    "vercel:link": "vercel link",
+    "vercel:env": "vercel env pull"
   },
   "dependencies": {
     "react": "^19.2.3",
