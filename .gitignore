@@ -5,7 +5,13 @@ dist/
 tmp/
 *.log
 .env.local
+.env.bak
 .vercel
 
 # Deployment output folder
 deploy/
+
+# Environment files (NEVER commit secrets)
+.env
+.env.*
+!.env.example
