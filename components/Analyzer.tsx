@@ -16,6 +16,9 @@ import { useSpeech } from "../App";
 import GuidedTour, { TourStep } from "./GuidedTour";
 import { ToolGuideHeader } from "./ToolGuideHeader";
 
+// Import cost-aware analyzer
+import { costAwareAnalyzer, quotaManager } from "../services/modelService";
+
 // Keep legacy imports for now (to be migrated later)
 import {
 	requestPrecisionParameters,
@@ -222,8 +225,8 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 					lang,
 				);
 				if (!fields || fields.length === 0) {
-					// Fallback: use modelService.analyzeImage
-					const analysis = await modelService.analyzeImage(
+					// Fallback: use cost-aware analyzer
+					const analysis = await costAwareAnalyzer.analyzeWithCostControl(
 						base64,
 						typeToAnalyze,
 						{
@@ -232,6 +235,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 							query: userQuery,
 							lang,
 							weather: weather || undefined,
+							budget: 'low-cost', // Deep audit uses low-cost tier
 						},
 					);
 					setResult(analysis);
@@ -240,8 +244,8 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 					setPrecisionFields(fields);
 				}
 			} else {
-				// ✅ Core refactor: use modelService.analyzeImage
-				const analysis = await modelService.analyzeImage(
+				// ✅ Core refactor: use cost-aware analyzer for cost optimization
+				const analysis = await costAwareAnalyzer.analyzeWithCostControl(
 					base64,
 					typeToAnalyze,
 					{
@@ -250,11 +254,15 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 						query: userQuery,
 						lang,
 						weather: weather || undefined,
+						budget: 'free', // Start with free tier for cost optimization
 					},
 				);
 				setResult(analysis);
 				if (speechEnabled) playSpeech(analysis.fullText);
 				if (onAction) onAction();
+
+				// Record usage for quota management
+				quotaManager.recordUsage(analysis.officialSource.includes('Gemini') ? 'gemini-3-flash-preview' : 'meta-llama/llama-3.1-8b-chat');
 			}
 		} catch (error: any) {
 			console.error("Analysis Error:", error);
@@ -309,14 +317,18 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 		setLoadingStep(0);
 		try {
 			const base64 = selectedMedia.split(",")[1];
-			// ✅ Use modelService.performDeepAudit? Not yet implemented → use gemini for now
-			const analysis = await performDeepAudit(
+			// ✅ Use cost-aware analyzer, not direct gemini call
+			const analysis = await costAwareAnalyzer.analyzeWithCostControl(
 				base64,
 				mimeType,
-				cropFamily,
-				dynamicData,
-				lang,
-				weather || undefined,
+				{
+					cropFamily,
+					userRank,
+					query: userQuery,
+					lang,
+					weather: weather || undefined,
+					budget: 'low-cost', // Deep audit uses low-cost tier
+				},
 			);
 			setResult(analysis);
 			setPrecisionFields(null);
