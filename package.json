@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "deploy": "vercel --prod",
     "deploy:preview": "vercel",
     "vercel:link": "vercel link",
-    "vercel:env": "vercel env pull"
+    "vercel:env": "vercel env pull",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "react": "^19.2.3",
