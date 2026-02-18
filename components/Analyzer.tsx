@@ -873,8 +873,8 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 									<h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none mb-4">
 										{result.diagnosis ||
 											(lang === "bn"
-												? "শনাক্তকরণ চলছে..."
-												: "Diagnosis Pending")}
+												? "CABI প্রটোকল: শনাক্তকরণ চলছে..."
+												: "CABI Protocol: Diagnosis Pending")}
 									</h2>
 									<div className="flex flex-wrap gap-2">
 										<span className="bg-slate-900 text-white px-3 py-1 rounded text-[8px] font-black uppercase">
