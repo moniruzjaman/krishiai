@@ -71,7 +71,7 @@ export class DirectAnalysisEnhancer {
 
 		return {
 			...result,
-			source: `${source} - ${sourceUrl}`,
+			officialSource: `${source} - ${sourceUrl}`,
 			groundingChunks: [
 				{
 					web: {
@@ -111,9 +111,9 @@ export class DirectAnalysisEnhancer {
 		return {
 			...baseResult,
 			diagnosis: enhancedResult.diagnosis,
-			management:
-				`${enhancedResult.management}\n\n${baseResult.management || ""}`.trim(),
-			source: `${enhancedResult.source} | ${baseResult.source || "AI Analysis"}`,
+			advisory:
+				`${enhancedResult.advisory}\n\n${baseResult.advisory || ""}`.trim(),
+			officialSource: `${enhancedResult.officialSource} | ${baseResult.officialSource || "AI Analysis"}`,
 			confidence: Math.max(baseResult.confidence, enhancedResult.confidence),
 			groundingChunks: [
 				...(enhancedResult.groundingChunks || []),
@@ -186,23 +186,22 @@ export class DirectAnalysisEnhancer {
 		lang: string,
 	): AnalysisResult {
 		const crop = cropFamily.toLowerCase();
-		const symptomStr = symptoms.join(", ");
 
 		let diagnosis = "Unknown condition";
-		let category = "Other";
-		let management = "Please consult local agricultural extension officer.";
-		let source = "Krishi AI Diagnostic System";
+		let category: "Pest" | "Disease" | "Deficiency" | "Other" = "Other";
+		let advisory = "Please consult local agricultural extension officer.";
+		let officialSource = "Krishi AI Diagnostic System";
 		let confidence = 40;
 
 		// Crop-specific rules with Bangladesh context
 		if (crop.includes("rice") && symptoms.some((s) => s.includes("yellow"))) {
 			diagnosis = "Brown Plant Hopper Infestation";
 			category = "Pest";
-			management =
+			advisory =
 				lang === "bn"
 					? "নিম তেল (5ml/লিটার পানি) ছিটিয়ে দিন। ট্রাইকোডার্মা বায়োকন্ট্রোল এজেন্ট হিসেবে ব্যবহার করুন।"
 					: "Apply neem oil (5ml/liter water). Use Trichoderma as biocontrol agent.";
-			source = "DAE Krishi Janala Guide 2024";
+			officialSource = "DAE Krishi Janala Guide 2024";
 			confidence = 75;
 		} else if (
 			crop.includes("rice") &&
@@ -210,11 +209,11 @@ export class DirectAnalysisEnhancer {
 		) {
 			diagnosis = "Zinc Deficiency";
 			category = "Deficiency";
-			management =
+			advisory =
 				lang === "bn"
 					? "জিংক সালফেট 10 কেজি/হেক্টর প্রয়োগ করুন। 0.5% ZnSO₄ দ্রবণে ফোলিয়ার স্প্রে করুন।"
 					: "Apply Zinc sulfate 10 kg/ha. Foliar spray with 0.5% ZnSO₄ solution.";
-			source = "BARC Fertilizer Guide 2024";
+			officialSource = "BARC Fertilizer Guide 2024";
 			confidence = 70;
 		} else if (
 			symptoms.some((s) => s.includes("spot")) ||
@@ -222,41 +221,39 @@ export class DirectAnalysisEnhancer {
 		) {
 			diagnosis = "Fungal Disease";
 			category = "Disease";
-			management =
+			advisory =
 				lang === "bn"
 					? "ম্যানকোজেব (2g/লিটার) স্প্রে করুন। উপযুক্ত গাছের দূরত্ব রাখুন।"
 					: "Spray Mancozeb (2g/liter). Ensure proper plant spacing.";
-			source = "BARI General Fungal Diseases Guide";
+			officialSource = "BARI General Fungal Diseases Guide";
 			confidence = 65;
 		} else if (symptoms.some((s) => s.includes("white"))) {
 			diagnosis = "Viral Disease";
 			category = "Disease";
-			management =
+			advisory =
 				lang === "bn"
 					? "ভাইরাসমুক্ত বীজ ব্যবহার করুন। এফিড ভেক্টর নিয়ন্ত্রণ করুন।"
 					: "Use virus-free seeds. Control aphid vectors.";
-			source = "BRRI Viral Diseases Guide";
+			officialSource = "BRRI Viral Diseases Guide";
 			confidence = 60;
 		}
 
 		return {
-			id: `rule-${Date.now()}`,
-			timestamp: Date.now(),
 			confidence,
 			diagnosis,
 			category,
-			management,
-			source,
-			audioBase64: null,
+			advisory,
+			fullText: advisory,
+			officialSource,
 			groundingChunks: [
 				{
 					web: {
-						title: source.split(" - ")[0] || source,
-						uri: source.includes("dae.gov.bd")
+						title: officialSource.split(" - ")[0] || officialSource,
+						uri: officialSource.includes("dae.gov.bd")
 							? "https://dae.gov.bd"
-							: source.includes("bari.gov.bd")
+							: officialSource.includes("bari.gov.bd")
 								? "https://bari.gov.bd"
-								: source.includes("barc.gov.bd")
+								: officialSource.includes("barc.gov.bd")
 									? "https://barc.gov.bd"
 									: "",
 					},
