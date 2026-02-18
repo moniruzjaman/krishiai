@@ -1,3 +1,4 @@
+// App.tsx (updated with OptimizedAnalyzer)
 import React, { useState, useEffect, useContext, createContext } from "react";
 import { View, User, SavedReport, Language, UserRole } from "./types";
 import { Hero } from "./components/Hero";
@@ -47,6 +48,9 @@ import { Logo } from "./components/Logo";
 import { FarmerAvatar } from "./components/FarmerAvatar";
 import ShareDialog from "./components/ShareDialog";
 import { syncUserProfile, saveReportToSupabase } from "./services/supabase";
+
+// Import OptimizedAnalyzer for direct user input analysis
+import OptimizedAnalyzer from "./components/OptimizedAnalyzer";
 
 interface SpeechContextType {
 	playSpeech: (text: string, audioBase64?: string) => Promise<void>;
@@ -161,7 +165,7 @@ const App: React.FC = () => {
 	};
 
 	const setIsPlayingState = (val: boolean) => {
-		// Fix: Changed non-existent setIsPlaying to setIsSpeaking to resolve compilation error.
+		// Fix: Changed non-existent setIsPlaying to setIsSpeaking
 		setIsSpeaking(val);
 		if (!val) setCurrentSource(null);
 	};
@@ -253,8 +257,9 @@ const App: React.FC = () => {
 					/>
 				);
 			case View.ANALYZER:
+				// Updated to use OptimizedAnalyzer for direct user input analysis
 				return (
-					<Analyzer
+					<OptimizedAnalyzer
 						onBack={() => handleNavigate(View.HOME)}
 						onAction={() => handleAction(50)}
 						onSaveReport={handleSaveReport}
@@ -624,7 +629,7 @@ const App: React.FC = () => {
 											strokeLinecap="round"
 											strokeLinejoin="round"
 											strokeWidth={2.5}
-											d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+											d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
 										/>
 									</svg>
 								) : (
