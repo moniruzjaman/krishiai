@@ -1,4 +1,4 @@
-import { AnalysisResult } from "../types";
+import { AnalysisResult, GroundingChunk } from "../types";
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { decodeBase64, decodeAudioData } from "./geminiService";
 import { getRuleBasedAnalysis } from "./ruleBasedAnalyzer";
@@ -269,26 +269,21 @@ export class CostAwareAnalyzer {
 				ruleBasedResult.confidence = 40;
 			}
 
-			return {
-				...ruleBasedResult,
-				source: `Rule-Based + ${ruleBasedResult.source}`,
-				timestamp: Date.now(),
-			};
+			return ruleBasedResult;
 		} catch (error: any) {
 			console.error("Rule-based fallback failed:", error);
 		}
 
 		// Step 5: Last resort - return generic helpful message
 		return {
-			id: `fallback-${Date.now()}`,
-			timestamp: Date.now(),
-			confidence: 30,
 			diagnosis: "এআই স্ক্যানার বর্তমানে উপলব্ধ নয়।",
 			category: "Other",
-			management:
+			confidence: 30,
+			advisory:
 				"দয়া করে আপনার স্থানীয় কৃষি প্রসারণ অফিসের সাথে যোগাযোগ করুন। আপনি এখানে ছবি আপলোড করতে পারেন এবং পরে আবার চেষ্টা করতে পারেন।",
-			source: "Krishi AI Fallback System",
-			audioBase64: null,
+			fullText:
+				"Krishi AI স্ক্যানার বর্তমানে উপলব্ধ নয়। দয়া করে স্থানীয় কৃষি প্রসারণ অফিসের সাথে যোগাযোগ করুন।",
+			officialSource: "Krishi AI Fallback System",
 			groundingChunks: [],
 		};
 	}
@@ -385,14 +380,12 @@ Language: ${lang === "bn" ? "Bangla" : "English"}.`;
 		// This is a placeholder - actual implementation would use the appropriate API
 		// For now, we'll simulate a basic response that can be enhanced later
 		return {
-			id: `simulated-${Date.now()}`,
-			timestamp: Date.now(),
-			confidence: 60,
 			diagnosis: "Preliminary analysis completed",
 			category: "Other",
-			management: "Further analysis required",
-			source: `Model: ${modelId}`,
-			audioBase64: null,
+			confidence: 60,
+			advisory: "Further analysis required",
+			fullText: `Model ${modelId} completed preliminary analysis. Further expert review recommended.`,
+			officialSource: `Model: ${modelId}`,
 			groundingChunks: [],
 		};
 	}
@@ -405,7 +398,8 @@ Language: ${lang === "bn" ? "Bangla" : "English"}.`;
 		return {
 			...result,
 			confidence: Math.min(85, result.confidence + 15),
-			management: `${result.management} (Enhanced with local expert knowledge)`,
+			advisory: `${result.advisory} (Enhanced with local expert knowledge)`,
+			fullText: `${result.fullText}\n\nEnhanced analysis based on local agricultural expert knowledge.`,
 		};
 	}
 }
