@@ -998,6 +998,60 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 								<p className="text-sm mt-1">{result.confidence || 0}%</p>
 							</div>
 
+							{/* CABI Deduction Logic Section */}
+							<div className="mb-6">
+								<h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+									<span>🔍</span>{" "}
+									{lang === "bn"
+										? "CABI নির্ধারণ প্রক্রিয়া"
+										: "CABI Deduction Process"}
+								</h3>
+								<div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+									<p className="text-sm text-slate-700 mb-2">
+										<strong>
+											{lang === "bn"
+												? "প্রধান শনাক্তকরণ:"
+												: "Primary Diagnosis:"}
+										</strong>{" "}
+										{result.diagnosis}
+									</p>
+									<p className="text-sm text-slate-700 mb-2">
+										<strong>
+											{lang === "bn"
+												? "নির্ধারণের ভিত্তি:"
+												: "Basis for Determination:"}
+										</strong>
+										{result.category === "Pest"
+											? lang === "bn"
+												? "পাতায় চিবানোর চিহ্ন, ফুটো, বা পোকা দেখা গেছে"
+												: "Chewing marks, holes, or visible pests observed"
+											: result.category === "Disease"
+												? lang === "bn"
+													? "পাতায় রঙ পরিবর্তন, ছোপ, বা পচন দেখা গেছে"
+													: "Color changes, spots, or rotting observed"
+												: result.category === "Deficiency"
+													? lang === "bn"
+														? "সমগ্র পাতা হলুদ হওয়া, বৃদ্ধি হ্রাস, বা পুষ্টির অভাবের লক্ষণ"
+														: "Overall yellowing, stunted growth, or nutrient deficiency symptoms"
+													: lang === "bn"
+														? "অন্যান্য লক্ষণ দেখা গেছে"
+														: "Other symptoms observed"}
+									</p>
+									<p className="text-sm text-slate-700">
+										<strong>
+											{lang === "bn" ? "CABI প্রটোকল:" : "CABI Protocol:"}
+										</strong>
+										{cropFamily.toLowerCase().includes("rice")
+											? lang === "bn"
+												? "BRRI গাইডলাইন 2024: পোকা আক্রমণের জন্য নিম তেল স্প্রে এবং ইউরিয়া সার"
+												: "BRRI Guideline 2024: Neem oil spray and urea fertilizer for pest infestation"
+											: lang === "bn"
+												? "BARI গাইডলাইন 2024: পোকা/রোগের জন্য উপযুক্ত প্রতিকার"
+												: "BARI Guideline 2024: Appropriate treatment for pests/diseases"}
+									</p>
+								</div>
+							</div>
+
 							{/* Advisory/Management Section - Always show */}
 							<div className="mb-6">
 								<h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
