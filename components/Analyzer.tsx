@@ -828,12 +828,33 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 				/>
 			)}
 
-			{result && !isLoading && (
-				<div className="space-y-8 animate-fade-in-up">
+			{/* Debug logging */}
+			{(() => {
+				console.log("=== ANALYZER RENDER DEBUG ===");
+				console.log("result:", result);
+				console.log("isLoading:", isLoading);
+				console.log("selectedMedia:", selectedMedia);
+				console.log("cropFamily:", cropFamily);
+				console.log("result && condition:", !!result);
+				return null;
+			})()}
+
+			{result && (
+				<div
+					className="space-y-8 animate-fade-in-up"
+					style={{ display: "block", visibility: "visible", opacity: 1 }}
+				>
 					<div
 						ref={reportRef}
 						className="bg-white rounded-none border-[12px] border-slate-900 p-8 md:p-14 shadow-2xl relative overflow-hidden flex flex-col print:shadow-none print:border-[5px]"
+						style={{ display: "block", visibility: "visible", opacity: 1 }}
 					>
+						{/* Debug info */}
+						<div className="bg-red-500 text-white p-4 mb-6 rounded-lg font-bold">
+							🚨 DEBUG: Result is displaying! Diagnosis: {result.diagnosis} |
+							Confidence: {result.confidence}%
+						</div>
+
 						<div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none rotate-12 select-none text-[8rem] font-black uppercase whitespace-nowrap overflow-hidden">
 							Govt Verified Protocol
 						</div>

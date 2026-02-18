@@ -171,10 +171,14 @@ const App: React.FC = () => {
 	};
 
 	const handleNavigate = (view: View) => {
+		console.log("=== NAVIGATION DEBUG ===");
+		console.log("Navigating to:", view);
+		console.log("Current view before:", currentView);
 		stopSpeech();
 		setCurrentView(view);
 		setIsDrawerOpen(false);
 		window.scrollTo({ top: 0, behavior: "smooth" });
+		console.log("Current view after:", view);
 	};
 
 	const handleAction = (xp: number) => {
