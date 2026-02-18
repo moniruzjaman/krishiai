@@ -21,3 +21,4 @@ token.json
 # Workspace Architecture
 .tmp/
 execution/__pycache__/
+.env*.local
