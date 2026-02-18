@@ -409,3 +409,8 @@ export const quotaManager = {
 	checkQuota: () => true,
 	recordUsage: () => {},
 };
+
+// Add hook for React components
+export function useModelService() {
+	return { costAwareAnalyzer, quotaManager };
+}

@@ -13,14 +13,12 @@ const test1Context = {
 };
 
 const baseResult1: AnalysisResult = {
-	id: "test-1",
-	timestamp: Date.now(),
 	confidence: 55,
 	diagnosis: "Possible pest infestation",
 	category: "Pest",
-	management: "Apply general pesticide",
-	source: "AI Analysis",
-	audioBase64: null,
+	advisory: "Apply general pesticide",
+	fullText: "Possible pest infestation - Apply general pesticide",
+	officialSource: "AI Analysis",
 	groundingChunks: [],
 };
 
@@ -44,14 +42,12 @@ const test2Context = {
 };
 
 const baseResult2: AnalysisResult = {
-	id: "test-2",
-	timestamp: Date.now(),
 	confidence: 45,
 	diagnosis: "Unknown condition",
 	category: "Other",
-	management: "Consult expert",
-	source: "AI Analysis",
-	audioBase64: null,
+	advisory: "Consult expert",
+	fullText: "Unknown condition - Consult expert",
+	officialSource: "AI Analysis",
 	groundingChunks: [],
 };
 
@@ -75,14 +71,12 @@ const test3Context = {
 };
 
 const baseResult3: AnalysisResult = {
-	id: "test-3",
-	timestamp: Date.now(),
 	confidence: 35,
 	diagnosis: "Unknown issue",
 	category: "Other",
-	management: "Need more information",
-	source: "AI Analysis",
-	audioBase64: null,
+	advisory: "Need more information",
+	fullText: "Unknown issue - Need more information",
+	officialSource: "AI Analysis",
 	groundingChunks: [],
 };
 
@@ -106,14 +100,13 @@ const test4Context = {
 };
 
 const baseResult4: AnalysisResult = {
-	id: "test-4",
-	timestamp: Date.now(),
 	confidence: 85,
 	diagnosis: "Brown Plant Hopper Infestation",
 	category: "Pest",
-	management: "Apply neem oil at 5ml/liter water",
-	source: "AI Analysis",
-	audioBase64: null,
+	advisory: "Apply neem oil at 5ml/liter water",
+	fullText:
+		"Brown Plant Hopper Infestation - Apply neem oil at 5ml/liter water",
+	officialSource: "AI Analysis",
 	groundingChunks: [],
 };
 

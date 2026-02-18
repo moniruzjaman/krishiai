@@ -162,20 +162,21 @@ const OptimizedAnalyzer: React.FC<OptimizedAnalyzerProps> = ({
 			console.error("Analysis failed:", error);
 			// Fallback to rule-based analysis
 			const fallbackResult: AnalysisResult = {
-				id: `fallback-${Date.now()}`,
-				timestamp: Date.now(),
 				confidence: 40,
 				diagnosis:
 					lang === "bn"
 						? "এআই স্ক্যানার বর্তমানে উপলব্ধ নয়।"
 						: "AI Scanner is currently unavailable.",
 				category: "Other",
-				management:
+				advisory:
 					lang === "bn"
 						? "দয়া করে আপনার স্থানীয় কৃষি প্রসারণ অফিসের সাথে যোগাযোগ করুন।"
 						: "Please contact your local agricultural extension office.",
-				source: "Krishi AI Fallback System",
-				audioBase64: null,
+				fullText:
+					lang === "bn"
+						? "এআই স্ক্যানার বর্তমানে উপলব্ধ নয়। দয়া করে স্থানীয় কৃষি প্রসারণ অফিসের সাথে যোগাযোগ করুন।"
+						: "AI Scanner is currently unavailable. Please contact your local agricultural extension office.",
+				officialSource: "Krishi AI Fallback System",
 				groundingChunks: [],
 			};
 			setResult(fallbackResult);
@@ -419,13 +420,15 @@ const OptimizedAnalyzer: React.FC<OptimizedAnalyzerProps> = ({
 							<div className="space-y-4">
 								<div>
 									<h4 className="font-bold text-slate-700 mb-2">বিশ্লেষণ:</h4>
-									<p className="text-slate-600">{result.management}</p>
+									<p className="text-slate-600">{result.advisory}</p>
 								</div>
 
 								<div>
 									<h4 className="font-bold text-slate-700 mb-2">উৎস:</h4>
-									{result.source && (
-										<p className="text-sm text-slate-500">{result.source}</p>
+									{result.officialSource && (
+										<p className="text-sm text-slate-500">
+											{result.officialSource}
+										</p>
 									)}
 								</div>
 							</div>
