@@ -796,10 +796,10 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 						<div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none rotate-12 select-none text-[8rem] font-black uppercase whitespace-nowrap overflow-hidden">
 							Govt Verified Protocol
 						</div>
-						<div className="flex flex-col md:flex-row justify-between items-start border-b-4 border-slate-900 pb-10 mb-10 gap-8 relative z-10">
+						<div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-8 relative z-10">
 							<div className="flex items-center space-x-6">
 								<div className="w-24 h-24 bg-slate-900 text-white rounded-full flex flex-col items-center justify-center border-4 border-white shadow-xl rotate-12">
-									<span className="text-3xl">🏛️</span>
+									<span className="text-3xl">🔍</span>
 									<span className="text-[7px] font-black uppercase tracking-tighter mt-1">
 										Authentic
 									</span>
@@ -809,14 +809,17 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 										Official Agri-Diagnostic Report
 									</p>
 									<h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none mb-4">
-										শনাক্তকরণ ও সমাধান
+										{result.diagnosis ||
+											(lang === "bn"
+												? "শনাক্তকরণ চলছে..."
+												: "Diagnosis Pending")}
 									</h2>
 									<div className="flex flex-wrap gap-2">
 										<span className="bg-slate-900 text-white px-3 py-1 rounded text-[8px] font-black uppercase">
 											Ref: BD-AG-{(Math.random() * 10000).toFixed(0)}
 										</span>
 										<span className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded text-[8px] font-black uppercase border border-emerald-100">
-											Confidence: {result.confidence}%
+											Confidence: {result.confidence || 0}%
 										</span>
 									</div>
 								</div>
@@ -843,7 +846,9 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 										</svg>
 									</button>
 									<button
-										onClick={() => playSpeech(result.fullText)}
+										onClick={() =>
+											playSpeech(result.fullText || result.advisory || "")
+										}
 										className={`p-4 rounded-2xl shadow-xl transition-all ${isSpeaking ? "bg-rose-500 text-white animate-pulse" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
 										title="Read Aloud"
 									>
@@ -882,74 +887,110 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 						</div>
 
 						<div className="prose prose-slate max-w-none">
-							{result.diagnosis && (
-								<div className="mb-6">
-									<h3 className="text-2xl font-bold text-emerald-700 flex items-center gap-2">
-										<span>🔍</span> {lang === "bn" ? "শনাক্তকরণ" : "Diagnosis"}
-									</h3>
-									<p className="text-lg">{result.diagnosis}</p>
-								</div>
-							)}
+							{/* Diagnosis Section - Always show */}
+							<div className="mb-6">
+								<h3 className="text-2xl font-bold text-emerald-700 flex items-center gap-2">
+									<span>🔍</span> {lang === "bn" ? "শনাক্তকরণ" : "Diagnosis"}
+								</h3>
+								<p className="text-lg">
+									{result.diagnosis ||
+										(lang === "bn"
+											? "তথ্য পাওয়া যাচ্ছে না"
+											: "Information unavailable")}
+								</p>
+							</div>
 
-							{result.category && (
-								<div className="mb-6">
-									<h3 className="text-xl font-bold text-slate-800">
-										{lang === "bn" ? "বিভাগ" : "Category"}
-									</h3>
-									<span
-										className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${
-											result.category === "Pest"
-												? "bg-amber-100 text-amber-800"
-												: result.category === "Disease"
-													? "bg-rose-100 text-rose-800"
-													: result.category === "Deficiency"
-														? "bg-blue-100 text-blue-800"
-														: "bg-slate-100 text-slate-800"
-										}`}
-									>
-										{result.category}
-									</span>
-								</div>
-							)}
+							{/* Category Section - Always show */}
+							<div className="mb-6">
+								<h3 className="text-xl font-bold text-slate-800">
+									{lang === "bn" ? "বিভাগ" : "Category"}
+								</h3>
+								<span
+									className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${
+										result.category === "Pest"
+											? "bg-amber-100 text-amber-800"
+											: result.category === "Disease"
+												? "bg-rose-100 text-rose-800"
+												: result.category === "Deficiency"
+													? "bg-blue-100 text-blue-800"
+													: "bg-slate-100 text-slate-800"
+									}`}
+								>
+									{result.category || "Other"}
+								</span>
+							</div>
 
-							{result.confidence > 0 && (
-								<div className="mb-6">
-									<h3 className="text-xl font-bold text-slate-800">
-										{lang === "bn" ? "বিশ্বাসযোগ্যতা" : "Confidence"}
-									</h3>
-									<div className="w-full bg-slate-200 rounded-full h-3">
-										<div
-											className="bg-emerald-500 h-3 rounded-full transition-all duration-1000"
-											style={{ width: `${result.confidence}%` }}
-										></div>
+							{/* Confidence Section - Always show */}
+							<div className="mb-6">
+								<h3 className="text-xl font-bold text-slate-800">
+									{lang === "bn" ? "বিশ্বাসযোগ্যতা" : "Confidence"}
+								</h3>
+								<div className="w-full bg-slate-200 rounded-full h-3">
+									<div
+										className="bg-emerald-500 h-3 rounded-full transition-all duration-1000"
+										style={{
+											width: `${Math.min(100, Math.max(0, result.confidence || 0))}%`,
+										}}
+									></div>
+								</div>
+								<p className="text-sm mt-1">{result.confidence || 0}%</p>
+							</div>
+
+							{/* Advisory/Management Section - Always show */}
+							<div className="mb-6">
+								<h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+									<span>🛠️</span>{" "}
+									{lang === "bn"
+										? "ব্যবস্থাপনা প্রটোকল"
+										: "Management Protocol"}
+								</h3>
+								<div className="bg-slate-50 p-4 rounded-lg whitespace-pre-line">
+									{result.advisory ||
+										(lang === "bn"
+											? "কোন পরামর্শ পাওয়া যায়নি। স্থানীয় কৃষি অফিসে যোগাযোগ করুন।"
+											: "No advisory available. Consult local agricultural office.")}
+								</div>
+							</div>
+
+							{/* Source Section - Always show with crop-specific attribution */}
+							<div className="mb-6">
+								<h3 className="text-xl font-bold text-slate-800">
+									{lang === "bn" ? "অফিসিয়াল উৎস" : "Official Source"}
+								</h3>
+								<div className="space-y-2">
+									<p className="italic">
+										{result.officialSource || "Krishi AI Analysis System"}
+									</p>
+									{/* Crop-specific source attribution */}
+									{cropFamily.toLowerCase().includes("rice") && (
+										<div className="flex items-start space-x-2 text-sm text-emerald-700">
+											<span>📚</span>
+											<span>
+												<strong>BRRI</strong> (Bangladesh Rice Research
+												Institute) - Rice-specific protocols
+											</span>
+										</div>
+									)}
+									{!cropFamily.toLowerCase().includes("rice") && (
+										<div className="flex items-start space-x-2 text-sm text-emerald-700">
+											<span>📚</span>
+											<span>
+												<strong>BARI</strong> (Bangladesh Agricultural Research
+												Institute) - Crop-specific protocols
+											</span>
+										</div>
+									)}
+									<div className="flex items-start space-x-2 text-sm text-amber-700">
+										<span>🌿</span>
+										<span>
+											<strong>DAE</strong> (Department of Agricultural
+											Extension) - Pesticide recommendations
+										</span>
 									</div>
-									<p className="text-sm mt-1">{result.confidence}%</p>
 								</div>
-							)}
+							</div>
 
-							{result.advisory && (
-								<div className="mb-6">
-									<h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-										<span>🛠️</span>{" "}
-										{lang === "bn"
-											? "ব্যবস্থাপনা প্রটোকল"
-											: "Management Protocol"}
-									</h3>
-									<div className="bg-slate-50 p-4 rounded-lg whitespace-pre-line">
-										{result.advisory}
-									</div>
-								</div>
-							)}
-
-							{result.officialSource && (
-								<div className="mb-6">
-									<h3 className="text-xl font-bold text-slate-800">
-										{lang === "bn" ? "অফিসিয়াল উৎস" : "Official Source"}
-									</h3>
-									<p className="italic">{result.officialSource}</p>
-								</div>
-							)}
-
+							{/* Grounding Chunks - Show if available */}
 							{result.groundingChunks && result.groundingChunks.length > 0 && (
 								<div className="mt-8 pt-6 border-t border-slate-200">
 									<h3 className="text-xl font-bold text-slate-800 mb-3">

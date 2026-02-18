@@ -257,9 +257,9 @@ const App: React.FC = () => {
 					/>
 				);
 			case View.ANALYZER:
-				// Updated to use OptimizedAnalyzer for direct user input analysis
+				// Use main Analyzer component with all fixes
 				return (
-					<OptimizedAnalyzer
+					<Analyzer
 						onBack={() => handleNavigate(View.HOME)}
 						onAction={() => handleAction(50)}
 						onSaveReport={handleSaveReport}
