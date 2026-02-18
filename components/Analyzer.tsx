@@ -415,6 +415,37 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 		}
 	};
 
+	// Debug function to test result display
+	const setTestResult = () => {
+		const testResult: AnalysisResult = {
+			confidence: 85,
+			diagnosis:
+				lang === "bn"
+					? "মাজরা পোকা আক্রমণ (Brown Plant Hopper)"
+					: "Brown Plant Hopper Infestation",
+			category: "Pest",
+			advisory:
+				lang === "bn"
+					? "নিম তেল ৫ মিলি/লিটার পানিতে মিশিয়ে স্প্রে করুন। প্রতি হেক্টরে ৫০ কেজি ইউরিয়া সার প্রয়োগ করুন।"
+					: "Apply neem oil at 5ml/liter water. Apply 50 kg urea fertilizer per hectare.",
+			fullText:
+				lang === "bn"
+					? "শনাক্তকরণ: মাজরা পোকা আক্রমণ। ব্যবস্থাপনা: নিম তেল স্প্রে করুন এবং ইউরিয়া সার প্রয়োগ করুন।"
+					: "Diagnosis: Brown Plant Hopper. Management: Apply neem oil spray and urea fertilizer.",
+			officialSource: cropFamily.toLowerCase().includes("rice")
+				? "BRRI (Bangladesh Rice Research Institute) - Rice Pest Management Guide 2024"
+				: "BARI (Bangladesh Agricultural Research Institute) - Crop Protection Guide 2024",
+			groundingChunks: [],
+		};
+		setResult(testResult);
+		console.log("Test result set:", testResult);
+		alert(
+			lang === "bn"
+				? "টেস্ট রেজাল্ট সেট করা হয়েছে! নিচে স্ক্রল করুন।"
+				: "Test result set! Scroll down to see it.",
+		);
+	};
+
 	return (
 		<div className="max-w-4xl mx-auto p-4 pb-32 animate-fade-in font-sans">
 			{showTour && (
@@ -467,6 +498,16 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 							]
 				}
 			/>
+
+			{/* Debug Button - Remove after testing */}
+			<div className="mb-4 flex justify-end">
+				<button
+					onClick={setTestResult}
+					className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-all"
+				>
+					🐛 Set Test Result
+				</button>
+			</div>
 
 			<div className="bg-white rounded-[3rem] p-6 md:p-10 shadow-xl border border-slate-100 mb-8 print:hidden">
 				<div className="space-y-6 mb-10">
