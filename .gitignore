@@ -15,3 +15,9 @@ deploy/
 .env
 .env.*
 !.env.example
+credentials.json
+token.json
+
+# Workspace Architecture
+.tmp/
+execution/__pycache__/
