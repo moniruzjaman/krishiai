@@ -60,7 +60,7 @@ export class HuggingFaceService {
   private token: string | null = null;
 
   constructor() {
-    this.token = import.meta.env.VITE_HF_TOKEN || process.env.HF_TOKEN;
+    this.token = (import.meta as any).env?.VITE_HF_TOKEN || (process as any).env?.HF_TOKEN;
     if (this.token) {
       this.hf = new HfInference(this.token);
     }
@@ -87,7 +87,7 @@ export class HuggingFaceService {
         inputs: text,
       });
 
-      return Array.isArray(result) ? result[0] : [result];
+      return Array.isArray(result) ? result : [result] as any;
     } catch (error) {
       console.warn('Bangla text classification failed:', error);
       return [];
@@ -108,7 +108,7 @@ export class HuggingFaceService {
         inputs: text,
       });
 
-      return Array.isArray(result) ? result : [result];
+      return (Array.isArray(result) ? result : [result]) as any;
     } catch (error) {
       console.warn('Bangla NER failed:', error);
       return [];
@@ -298,14 +298,14 @@ export class HuggingFaceService {
     }
 
     if (lowerLabel.includes('disease') || lowerLabel.includes('fungus') ||
-        lowerLabel.includes('blast') || lowerLabel.includes('blight') ||
-        lowerLabel.includes('spot') || lowerLabel.includes('rot')) {
+      lowerLabel.includes('blast') || lowerLabel.includes('blight') ||
+      lowerLabel.includes('spot') || lowerLabel.includes('rot')) {
       return 'Disease';
     }
 
     if (lowerLabel.includes('deficiency') || lowerLabel.includes('nitrogen') ||
-        lowerLabel.includes('phosphorus') || lowerLabel.includes('potassium') ||
-        lowerLabel.includes('yellow')) {
+      lowerLabel.includes('phosphorus') || lowerLabel.includes('potassium') ||
+      lowerLabel.includes('yellow')) {
       return 'Deficiency';
     }
 

@@ -237,7 +237,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 							query: userQuery,
 							lang,
 							weather: weather || undefined,
-							budget: 'low-cost', // Deep audit uses low-cost tier
+							budget: "low-cost", // Deep audit uses low-cost tier
 						},
 					);
 					setResult(analysis);
@@ -256,7 +256,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 						query: userQuery,
 						lang,
 						weather: weather || undefined,
-						budget: 'free', // Start with free tier for cost optimization
+						budget: "free", // Start with free tier for cost optimization
 					},
 				);
 				setResult(analysis);
@@ -264,7 +264,13 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 				if (onAction) onAction();
 
 				// Record usage for quota management
-				quotaManager.recordUsage(analysis.officialSource.includes('Gemini') ? 'gemini-3-flash-preview' : 'meta-llama/llama-3.1-8b-chat');
+				if (analysis.officialSource) {
+					quotaManager.recordUsage(
+						analysis.officialSource.includes("Gemini")
+							? "gemini-3-flash-preview"
+							: "meta-llama/llama-3.1-8b-chat",
+					);
+				}
 			}
 		} catch (error: any) {
 			console.error("Analysis Error:", error);
@@ -328,7 +334,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 					query: userQuery,
 					lang,
 					weather: weather || undefined,
-					budget: 'low-cost', // Deep audit uses low-cost tier
+					budget: "low-cost", // Deep audit uses low-cost tier
 				},
 			);
 			setResult(analysis);

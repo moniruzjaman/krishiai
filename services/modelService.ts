@@ -312,8 +312,8 @@ export class CostAwareAnalyzer {
       if (result.confidence >= 50 && budget !== 'premium') {
         return await this.enhanceAnalysis(result, options);
       }
-    } catch (error) {
-      console.warn('Free tier LLM failed, falling back to low-cost:', error.message);
+    } catch (error: any) {
+      console.warn('Free tier LLM failed, falling back to low-cost:', error?.message || error);
     }
 
     // Step 2: Fallback to low-cost model
@@ -326,8 +326,8 @@ export class CostAwareAnalyzer {
         ...options,
         systemInstruction: lowCostPrompt
       });
-    } catch (error) {
-      console.error('Low-cost failed, falling back to premium:', error.message);
+    } catch (error: any) {
+      console.error('Low-cost failed, falling back to premium:', error?.message || error);
     }
 
     // Step 3: Last resort - Gemini premium
@@ -429,7 +429,8 @@ Language: ${lang === 'bn' ? 'Bangla' : 'English'}.`;
     mimeType: string,
     options: any
   ): Promise<AnalysisResult> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || import.meta.env.VITE_GEMINI_API_KEY });
+    const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (process as any).env?.API_KEY;
+    const ai = new GoogleGenAI({ apiKey });
 
     const response = await ai.models.generateContent({
       model: modelId,
@@ -546,6 +547,14 @@ export class QuotaManager {
   }
 }
 
+// --- Singleton Instance ---
+let _modelService: AIService | null = null;
+
+// --- Helper for Default Model ---
+const getDefaultModelId = (): string => {
+  return 'meta-llama/llama-3.1-8b-chat';
+};
+
 // --- Export instances ---
 export const costAwareAnalyzer = new CostAwareAnalyzer();
 export const quotaManager = new QuotaManager();
@@ -582,7 +591,7 @@ export class GeminiProvider implements AIService {
 
   private getGemini(): GoogleGenAI {
     if (!this.ai) {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.API_KEY;
+      const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (process as any).env?.API_KEY;
       if (!apiKey) {
         throw new Error('Gemini API key missing. Set VITE_GEMINI_API_KEY in .env or environment.');
       }
@@ -697,7 +706,7 @@ export class OpenRouterProvider implements AIService {
   private apiKey: string | null = null;
 
   constructor() {
-    this.apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY;
+    this.apiKey = (import.meta as any).env?.VITE_OPENROUTER_API_KEY || (process as any).env?.OPENROUTER_API_KEY;
     if (!this.apiKey) {
       console.warn('OpenRouter API key not set. Calls will fail unless provided per-request.');
     }
@@ -760,13 +769,13 @@ export class OpenRouterProvider implements AIService {
     return resp.choices?.[0]?.message?.content || '';
   }
 
-  async generateSpeech(text: string, options?: { modelId?: string }) {
+  async generateSpeech(text: string, options?: { modelId?: string }): Promise<string> {
     // OpenRouter does NOT support TTS natively → fallback to Gemini or skip
     // We'll throw to force fallback in caller
     throw new Error('OpenRouter does not support speech synthesis. Falling back to Gemini.');
   }
 
-  async analyzeImage(base64: string, mimeType: string, options?: any) {
+  async analyzeImage(base64: string, mimeType: string, options?: any): Promise<AnalysisResult> {
     // OpenRouter does NOT support image input (as of 2025)
     // So we must fallback to Gemini for image analysis
     throw new Error('OpenRouter does not support image analysis. Falling back to Gemini.');
