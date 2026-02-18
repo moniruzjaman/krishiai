@@ -499,16 +499,6 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 				}
 			/>
 
-			{/* Debug Button - Remove after testing */}
-			<div className="mb-4 flex justify-end">
-				<button
-					onClick={setTestResult}
-					className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-all"
-				>
-					🐛 Set Test Result
-				</button>
-			</div>
-
 			<div className="bg-white rounded-[3rem] p-6 md:p-10 shadow-xl border border-slate-100 mb-8 print:hidden">
 				<div className="space-y-6 mb-10">
 					<div className="flex items-center justify-between">
@@ -847,14 +837,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 					<div
 						ref={reportRef}
 						className="bg-white rounded-none border-[12px] border-slate-900 p-8 md:p-14 shadow-2xl relative overflow-hidden flex flex-col print:shadow-none print:border-[5px]"
-						style={{ display: "block", visibility: "visible", opacity: 1 }}
 					>
-						{/* Debug info */}
-						<div className="bg-red-500 text-white p-4 mb-6 rounded-lg font-bold">
-							🚨 DEBUG: Result is displaying! Diagnosis: {result.diagnosis} |
-							Confidence: {result.confidence}%
-						</div>
-
 						<div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none rotate-12 select-none text-[8rem] font-black uppercase whitespace-nowrap overflow-hidden">
 							Govt Verified Protocol
 						</div>
