@@ -165,7 +165,7 @@ const EnhancedCABIDiagnosisTraining: React.FC<
 	};
 
 	const getCurrentModule = () =>
-		ENHANCED_MODULES.find((m) => m.id === activeModule);
+		ENHANCED_MODULES.find((m) => m.id === activeModule) || ENHANCED_MODULES[0];
 
 	return (
 		<div className="max-w-4xl mx-auto p-4 pb-32 font-sans min-h-screen">
@@ -221,14 +221,14 @@ const EnhancedCABIDiagnosisTraining: React.FC<
 				<div className="flex items-center justify-between mb-8">
 					<div className="flex items-center space-x-4">
 						<div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-2xl">
-							{getCurrentModule()?.icon}
+							{getCurrentModule()?.icon ?? "❓"}
 						</div>
 						<div>
 							<h2 className="text-2xl font-black text-slate-800">
-								{getCurrentModule()?.title}
+								{getCurrentModule()?.title ?? "Unknown Module"}
 							</h2>
 							<p className="text-sm text-slate-500">
-								{getCurrentModule()?.desc}
+								{getCurrentModule()?.desc ?? "Description not available"}
 							</p>
 						</div>
 					</div>
@@ -249,13 +249,13 @@ const EnhancedCABIDiagnosisTraining: React.FC<
 
 				<div className="space-y-8">
 					<div className="prose prose-slate max-w-none text-slate-700 font-medium leading-relaxed">
-						{getCurrentModule()?.content}
+						{getCurrentModule()?.content ?? "Content not available"}
 					</div>
 
 					{/* Checkpoints */}
 					{getCurrentModule()?.checkpoints && (
 						<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-							{getCurrentModule().checkpoints.map((checkpoint, idx) => (
+							{getCurrentModule()!.checkpoints.map((checkpoint, idx) => (
 								<div
 									key={idx}
 									className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center"
@@ -277,29 +277,32 @@ const EnhancedCABIDiagnosisTraining: React.FC<
 							</h3>
 							<div className="bg-slate-50 rounded-2xl p-6">
 								<p className="text-slate-700 mb-4">
-									{getCurrentModule().simulator.question}
+									{getCurrentModule()?.simulator?.question ??
+										"Question not available"}
 								</p>
 								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-									{getCurrentModule().simulator.options.map((option, idx) => (
-										<button
-											key={idx}
-											onClick={() => handleOptionSelect(option.value)}
-											className={`p-4 rounded-xl border-2 transition-all ${
-												selectedOption === option.value
-													? "border-emerald-500 bg-emerald-50 text-emerald-700"
-													: "border-slate-200 hover:border-emerald-300 hover:bg-slate-100"
-											}`}
-										>
-											<div className="font-bold mb-2">{option.label}</div>
-											{showFeedback && selectedOption === option.value && (
-												<div
-													className={`text-sm mt-2 ${option.isCorrect ? "text-emerald-600" : "text-rose-600"}`}
-												>
-													{option.feedback}
-												</div>
-											)}
-										</button>
-									))}
+									{getCurrentModule()?.simulator?.options?.map(
+										(option, idx) => (
+											<button
+												key={idx}
+												onClick={() => handleOptionSelect(option.value)}
+												className={`p-4 rounded-xl border-2 transition-all ${
+													selectedOption === option.value
+														? "border-emerald-500 bg-emerald-50 text-emerald-700"
+														: "border-slate-200 hover:border-emerald-300 hover:bg-slate-100"
+												}`}
+											>
+												<div className="font-bold mb-2">{option.label}</div>
+												{showFeedback && selectedOption === option.value && (
+													<div
+														className={`text-sm mt-2 ${option.isCorrect ? "text-emerald-600" : "text-rose-600"}`}
+													>
+														{option.feedback}
+													</div>
+												)}
+											</button>
+										),
+									)}
 								</div>
 							</div>
 						</div>
@@ -313,10 +316,11 @@ const EnhancedCABIDiagnosisTraining: React.FC<
 							</h3>
 							<div className="bg-slate-50 rounded-2xl p-6">
 								<p className="text-slate-700 mb-4 font-bold">
-									{getCurrentModule().quiz.question}
+									{getCurrentModule()?.quiz?.question ??
+										"Question not available"}
 								</p>
 								<div className="space-y-3">
-									{getCurrentModule().quiz.options.map((option, idx) => (
+									{getCurrentModule()?.quiz?.options?.map((option, idx) => (
 										<button
 											key={idx}
 											onClick={() => handleOptionSelect(option.value)}
