@@ -844,9 +844,9 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 						<div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-8 relative z-10">
 							<div className="flex items-center space-x-6">
 								<div className="w-24 h-24 bg-slate-900 text-white rounded-full flex flex-col items-center justify-center border-4 border-white shadow-xl rotate-12">
-									<span className="text-3xl">🔍</span>
+									<span className="text-3xl">🔬</span>
 									<span className="text-[7px] font-black uppercase tracking-tighter mt-1">
-										Authentic
+										Scientific
 									</span>
 								</div>
 								<div>
@@ -865,6 +865,9 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 										</span>
 										<span className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded text-[8px] font-black uppercase border border-emerald-100">
 											Confidence: {result.confidence || 0}%
+										</span>
+										<span className="bg-blue-50 text-blue-700 px-3 py-1 rounded text-[8px] font-black uppercase border border-blue-100">
+											🔬 Scientific Audit
 										</span>
 									</div>
 								</div>
@@ -981,15 +984,21 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 								<p className="text-sm mt-1">{result.confidence || 0}%</p>
 							</div>
 
-							{/* CABI Diagnosis Standard Results */}
+							{/* CABI Diagnosis Standard Results - Scientific Audit */}
 							<div className="mb-8">
 								<div className="bg-gradient-to-br from-blue-50 to-emerald-50 p-6 rounded-2xl border-2 border-blue-200 shadow-lg">
-									<h3 className="text-2xl font-black text-slate-800 flex items-center gap-3 mb-6">
-										<span className="text-3xl">🌾</span>
-										{lang === "bn"
-											? "CABI আন্তর্জাতিক কৃষি গবেষণা ফলাফল"
-											: "CABI International Agricultural Research Results"}
-									</h3>
+									<div className="flex items-center justify-between mb-6">
+										<h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+											<span className="text-3xl">🌾</span>
+											{lang === "bn"
+												? "CABI আন্তর্জাতিক কৃষি গবেষণা ফলাফল"
+												: "CABI International Agricultural Research Results"}
+										</h3>
+										<div className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full">
+											<span className="text-lg">🔬</span>
+											<span className="text-xs font-black uppercase tracking-widest">Scientific Audit</span>
+										</div>
+									</div>
 
 									{/* Primary Diagnosis */}
 									<div className="mb-6 bg-white p-5 rounded-xl border border-blue-100">
