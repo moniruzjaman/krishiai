@@ -20,7 +20,81 @@ export interface AIModel {
 }
 
 export const AVAILABLE_MODELS: Record<string, AIModel> = {
-	// Free Tier Models (Priority 1 - Bangladesh optimized)
+	// Premium Tier Models (Priority 1 - Vision Capable)
+	"gemini-3-flash-preview": {
+		id: "gemini-3-flash-preview",
+		name: "Gemini 3 Flash Preview",
+		provider: "gemini",
+		supportsAudio: true,
+		isFree: false,
+		tier: "premium",
+		banglaCapable: true,
+		agricultureOptimized: true,
+	},
+	"gemini-2.5": {
+		id: "gemini-2.5",
+		name: "Gemini 2.5 (Pro)",
+		provider: "gemini",
+		supportsAudio: true,
+		isFree: false,
+		tier: "premium",
+		banglaCapable: true,
+		agricultureOptimized: true,
+	},
+	"qwen-vl-max": {
+		id: "qwen-vl-max",
+		name: "Qwen-VL Max",
+		provider: "openrouter",
+		supportsAudio: false,
+		isFree: false,
+		tier: "premium",
+		banglaCapable: true,
+		agricultureOptimized: true,
+	},
+	"kimi-vision": {
+		id: "kimi-vision",
+		name: "Kimi Vision",
+		provider: "openrouter",
+		supportsAudio: false,
+		isFree: false,
+		tier: "premium",
+		banglaCapable: true,
+		agricultureOptimized: true,
+	},
+
+	// Low-Cost Tier Models (Priority 2 - Vision Capable)
+	"gpt-4o-mini": {
+		id: "gpt-4o-mini",
+		name: "GPT-4o Mini",
+		provider: "openrouter",
+		supportsAudio: false,
+		isFree: false,
+		tier: "low-cost",
+		banglaCapable: true,
+		agricultureOptimized: true,
+	},
+	"gemma-2-9b-it": {
+		id: "gemma-2-9b-it",
+		name: "Gemma 2 9B",
+		provider: "openrouter",
+		supportsAudio: false,
+		isFree: false,
+		tier: "low-cost",
+		banglaCapable: true,
+		agricultureOptimized: true,
+	},
+
+	// Free Tier Models (Priority 3 - Fallback)
+	"google/gemini-flash-1.5": {
+		id: "google/gemini-flash-1.5",
+		name: "Gemini Flash 1.5 Vision",
+		provider: "openrouter",
+		supportsAudio: false,
+		isFree: true,
+		tier: "free",
+		banglaCapable: true,
+		agricultureOptimized: true,
+	},
 	"meta-llama/llama-3.1-8b-chat": {
 		id: "meta-llama/llama-3.1-8b-chat",
 		name: "Llama 3.1 8B Chat",
@@ -41,16 +115,6 @@ export const AVAILABLE_MODELS: Record<string, AIModel> = {
 		banglaCapable: true,
 		agricultureOptimized: true,
 	},
-	"google/gemini-flash-1.5": {
-		id: "google/gemini-flash-1.5",
-		name: "Gemini Flash 1.5 (OpenRouter)",
-		provider: "openrouter",
-		supportsAudio: false,
-		isFree: true,
-		tier: "free",
-		banglaCapable: true,
-		agricultureOptimized: true,
-	},
 	"phi-3-mini": {
 		id: "phi-3-mini",
 		name: "Phi-3 Mini",
@@ -61,50 +125,6 @@ export const AVAILABLE_MODELS: Record<string, AIModel> = {
 		banglaCapable: true,
 		agricultureOptimized: true,
 	},
-
-	// Low-Cost Tier Models (Priority 2)
-	"openai/gpt-3.5-turbo": {
-		id: "openai/gpt-3.5-turbo",
-		name: "GPT-3.5 Turbo",
-		provider: "openrouter",
-		supportsAudio: false,
-		isFree: false,
-		tier: "low-cost",
-		banglaCapable: true,
-		agricultureOptimized: true,
-	},
-	"gemma-2-9b": {
-		id: "gemma-2-9b",
-		name: "Gemma 2 9B",
-		provider: "openrouter",
-		supportsAudio: false,
-		isFree: false,
-		tier: "low-cost",
-		banglaCapable: true,
-		agricultureOptimized: true,
-	},
-	"mixtral-8x7b": {
-		id: "mixtral-8x7b",
-		name: "Mixtral 8x7B",
-		provider: "openrouter",
-		supportsAudio: false,
-		isFree: false,
-		tier: "low-cost",
-		banglaCapable: true,
-		agricultureOptimized: true,
-	},
-
-	// Premium Tier Models (Priority 3)
-	"gemini-3-flash-preview": {
-		id: "gemini-3-flash-preview",
-		name: "Gemini 3 Flash Preview",
-		provider: "gemini",
-		supportsAudio: true,
-		isFree: false,
-		tier: "premium",
-		banglaCapable: true,
-		agricultureOptimized: true,
-	},
 };
 
 export function getOptimalModel(
@@ -112,44 +132,96 @@ export function getOptimalModel(
 	budget: "free" | "low-cost" | "premium",
 	lang: string,
 ): AIModel {
-	// Priority order based on budget and capability
 	const candidates = Object.values(AVAILABLE_MODELS);
 
-	// Filter by budget
-	let filtered = candidates.filter((model) =>
-		budget === "free"
-			? model.isFree
-			: budget === "low-cost"
-				? model.tier !== "premium"
-				: true,
-	);
+	// Priority order based on budget and capability
+	// Premium > Low-Cost > Free (for best image analysis)
+	let filtered: AIModel[] = [];
 
-	// Prioritize Bangla-capable and agriculture-optimized models
+	// Step 1: Filter by budget tier priority
+	if (budget === "premium") {
+		// Premium users get premium models first
+		filtered = candidates.filter((model) => model.tier === "premium");
+	} else if (budget === "low-cost") {
+		// Low-cost users get low-cost or premium (if available)
+		filtered = candidates.filter(
+			(model) => model.tier === "low-cost" || model.tier === "premium",
+		);
+	} else {
+		// free
+		// Free users get all tiers, but sorted by quality
+		filtered = candidates;
+	}
+
+	// Step 2: Prioritize vision-capable models for image analysis
+	if (task.includes("image") || task.includes("analyze")) {
+		// Filter for vision-capable models
+		filtered = filtered.filter(
+			(model) =>
+				model.supportsAudio === true ||
+				model.id.includes("vision") ||
+				model.id.includes("gemini") ||
+				model.id.includes("qwen") ||
+				model.id.includes("kimi") ||
+				model.id.includes("gpt-4"),
+		);
+	}
+
+	// Step 3: Prioritize Bangla and agriculture optimization
 	filtered = filtered.filter(
 		(model) => model.banglaCapable && model.agricultureOptimized,
 	);
 
-	// If no matches, fall back to any model in the budget tier
-	if (filtered.length === 0) {
+	// Step 4: If no vision models found for image tasks, use any model in budget
+	if (
+		filtered.length === 0 &&
+		(task.includes("image") || task.includes("analyze"))
+	) {
 		filtered = candidates.filter((model) =>
 			budget === "free"
-				? model.isFree
+				? true // All models for free tier
 				: budget === "low-cost"
 					? model.tier !== "premium"
-					: true,
+					: model.tier === "premium",
 		);
 	}
 
-	// Return first candidate or default
-	return filtered[0] || AVAILABLE_MODELS["phi-3-mini"];
+	// Step 5: Sort by priority: premium > low-cost > free
+	const tierOrder: Record<string, number> = {
+		premium: 3,
+		"low-cost": 2,
+		free: 1,
+	};
+	filtered.sort((a, b) => {
+		// First sort by tier
+		const tierDiff = tierOrder[b.tier] - tierOrder[a.tier];
+		if (tierDiff !== 0) return tierDiff;
+
+		// Then by Bangla and agriculture optimization
+		const aScore = (a.banglaCapable ? 1 : 0) + (a.agricultureOptimized ? 1 : 0);
+		const bScore = (b.banglaCapable ? 1 : 0) + (b.agricultureOptimized ? 1 : 0);
+		return bScore - aScore;
+	});
+
+	// Return first candidate or default to premium Gemini
+	return filtered[0] || AVAILABLE_MODELS["gemini-3-flash-preview"];
 }
 
 // --- Cost-Aware Analyzer ---
 export class CostAwareAnalyzer {
-	private static readonly FREE_TIER_MODELS = [
+	private static readonly PREMIUM_MODELS = [
+		"gemini-3-flash-preview",
+		"gemini-2.5",
+		"qwen-vl-max",
+		"kimi-vision",
+	];
+
+	private static readonly LOW_COST_MODELS = ["gpt-4o-mini", "gemma-2-9b-it"];
+
+	private static readonly FREE_MODELS = [
+		"google/gemini-flash-1.5",
 		"meta-llama/llama-3.1-8b-chat",
 		"mistral/mistral-7b-instruct",
-		"google/gemini-flash-1.5",
 		"phi-3-mini",
 	];
 
@@ -165,50 +237,43 @@ export class CostAwareAnalyzer {
 			budget?: "free" | "low-cost" | "premium";
 		},
 	): Promise<AnalysisResult> {
-		const { budget = "free", lang = "bn", cropFamily = "General" } = options;
+		const { budget = "premium", lang = "bn", cropFamily = "General" } = options;
 
-		// Step 0: Try Hugging Face first (FREE, fastest, offline-capable)
+		// Step 1: Try premium models first (best vision capabilities)
 		try {
-			// HF integration temporarily disabled for clean build
-			// Will be re-enabled after fixing TypeScript errors
-			console.log("Hugging Face integration temporarily disabled");
-		} catch (error) {
-			console.warn("Hugging Face skipped:", error);
-		}
-
-		try {
-			// Step 1: Try free-tier LLM model
-			const freeModel = getOptimalModel("image-analysis", budget, lang);
-			const freePrompt = this.getFreeTierPrompt(
+			const premiumModel = getOptimalModel("image-analysis", "premium", lang);
+			const premiumPrompt = this.getPremiumPrompt(
 				cropFamily,
 				lang,
 				options.query,
 			);
 
-			console.log(`Using free-tier LLM: ${freeModel.name} (${freeModel.id})`);
+			console.log(
+				`Using premium model: ${premiumModel.name} (${premiumModel.id})`,
+			);
 
 			const result = await this.analyzeWithModel(
-				freeModel.id,
+				premiumModel.id,
 				base64,
 				mimeType,
 				{
 					...options,
-					systemInstruction: freePrompt,
+					systemInstruction: premiumPrompt,
 				},
 			);
 
 			// Validate confidence - if high enough, return immediately
-			if (result.confidence >= 65) {
+			if (result.confidence >= 75) {
 				return result;
 			}
 
-			// If confidence is low but within acceptable range, try to enhance
-			if (result.confidence >= 50 && budget !== "premium") {
+			// If confidence is low, try to enhance with additional analysis
+			if (result.confidence >= 50 && budget !== "free") {
 				return await this.enhanceAnalysis(result, options);
 			}
 		} catch (error: any) {
 			console.warn(
-				"Free tier LLM failed, falling back to low-cost:",
+				"Premium model failed, falling back to low-cost:",
 				error?.message || error,
 			);
 		}
@@ -231,29 +296,27 @@ export class CostAwareAnalyzer {
 			});
 		} catch (error: any) {
 			console.error(
-				"Low-cost failed, falling back to premium:",
+				"Low-cost failed, falling back to free tier:",
 				error?.message || error,
 			);
 		}
 
-		// Step 3: Last resort - Gemini premium
+		// Step 3: Last resort - free tier models
 		try {
-			const premiumModel = getOptimalModel("image-analysis", "premium", lang);
-			console.log(
-				`Using premium model: ${premiumModel.name} (${premiumModel.id})`,
-			);
+			const freeModel = getOptimalModel("image-analysis", "free", lang);
+			console.log(`Using free-tier model: ${freeModel.name} (${freeModel.id})`);
 
-			const premiumPrompt = this.getPremiumPrompt(
+			const freePrompt = this.getFreeTierPrompt(
 				cropFamily,
 				lang,
 				options.query,
 			);
-			return await this.analyzeWithModel(premiumModel.id, base64, mimeType, {
+			return await this.analyzeWithModel(freeModel.id, base64, mimeType, {
 				...options,
-				systemInstruction: premiumPrompt,
+				systemInstruction: freePrompt,
 			});
 		} catch (error: any) {
-			console.error("Premium model failed:", error?.message || error);
+			console.error("Free tier failed:", error?.message || error);
 		}
 
 		// Step 4: Rule-based fallback (no API calls needed)
