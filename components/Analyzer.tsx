@@ -227,7 +227,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 					lang,
 				);
 				if (!fields || fields.length === 0) {
-					// Fallback: use cost-aware analyzer
+					// Fallback: use premium model for deep audit
 					const analysis = await costAwareAnalyzer.analyzeWithCostControl(
 						base64,
 						typeToAnalyze,
@@ -237,7 +237,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 							query: userQuery,
 							lang,
 							weather: weather || undefined,
-							budget: "low-cost", // Deep audit uses low-cost tier
+							budget: "premium", // Deep audit uses premium tier for best accuracy
 						},
 					);
 					setResult(analysis);
@@ -246,7 +246,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 					setPrecisionFields(fields);
 				}
 			} else {
-				// ✅ Core refactor: use cost-aware analyzer for cost optimization
+				// ✅ Use premium models first for accurate diagnosis
 				const analysis = await costAwareAnalyzer.analyzeWithCostControl(
 					base64,
 					typeToAnalyze,
@@ -256,7 +256,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 						query: userQuery,
 						lang,
 						weather: weather || undefined,
-						budget: "free", // Start with free tier for cost optimization
+						budget: "premium", // Start with premium tier for best vision analysis
 					},
 				);
 				setResult(analysis);
@@ -324,7 +324,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 		setLoadingStep(0);
 		try {
 			const base64 = selectedMedia.split(",")[1];
-			// ✅ Use cost-aware analyzer, not direct gemini call
+			// ✅ Use premium model for accurate diagnosis
 			const analysis = await costAwareAnalyzer.analyzeWithCostControl(
 				base64,
 				mimeType,
@@ -334,7 +334,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 					query: userQuery,
 					lang,
 					weather: weather || undefined,
-					budget: "low-cost", // Deep audit uses low-cost tier
+					budget: "premium", // Deep audit uses premium tier for best accuracy
 				},
 			);
 			setResult(analysis);
