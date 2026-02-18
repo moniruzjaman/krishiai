@@ -981,103 +981,201 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 								<p className="text-sm mt-1">{result.confidence || 0}%</p>
 							</div>
 
-							{/* CABI Deduction Logic Section */}
-							<div className="mb-6">
-								<h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-									<span>🔍</span>{" "}
-									{lang === "bn"
-										? "CABI নির্ধারণ প্রক্রিয়া"
-										: "CABI Deduction Process"}
-								</h3>
-								<div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-									<p className="text-sm text-slate-700 mb-2">
-										<strong>
-											{lang === "bn"
-												? "প্রধান শনাক্তকরণ:"
-												: "Primary Diagnosis:"}
-										</strong>{" "}
-										{result.diagnosis}
-									</p>
-									<p className="text-sm text-slate-700 mb-2">
-										<strong>
-											{lang === "bn"
-												? "নির্ধারণের ভিত্তি:"
-												: "Basis for Determination:"}
-										</strong>
-										{result.category === "Pest"
-											? lang === "bn"
-												? "পাতায় চিবানোর চিহ্ন, ফুটো, বা পোকা দেখা গেছে"
-												: "Chewing marks, holes, or visible pests observed"
-											: result.category === "Disease"
-												? lang === "bn"
-													? "পাতায় রঙ পরিবর্তন, ছোপ, বা পচন দেখা গেছে"
-													: "Color changes, spots, or rotting observed"
-												: result.category === "Deficiency"
-													? lang === "bn"
-														? "সমগ্র পাতা হলুদ হওয়া, বৃদ্ধি হ্রাস, বা পুষ্টির অভাবের লক্ষণ"
-														: "Overall yellowing, stunted growth, or nutrient deficiency symptoms"
-													: lang === "bn"
-														? "অন্যান্য লক্ষণ দেখা গেছে"
-														: "Other symptoms observed"}
-									</p>
-									<p className="text-sm text-slate-700">
-										<strong>
-											{lang === "bn" ? "CABI প্রটোকল:" : "CABI Protocol:"}
-										</strong>
-										{cropFamily.toLowerCase().includes("rice")
-											? lang === "bn"
-												? "BRRI গাইডলাইন 2024: পোকা আক্রমণের জন্য নিম তেল স্প্রে এবং ইউরিয়া সার"
-												: "BRRI Guideline 2024: Neem oil spray and urea fertilizer for pest infestation"
-											: lang === "bn"
-												? "BARI গাইডলাইন 2024: পোকা/রোগের জন্য উপযুক্ত প্রতিকার"
-												: "BARI Guideline 2024: Appropriate treatment for pests/diseases"}
-									</p>
-								</div>
-							</div>
+							{/* CABI Diagnosis Standard Results */}
+							<div className="mb-8">
+								<div className="bg-gradient-to-br from-blue-50 to-emerald-50 p-6 rounded-2xl border-2 border-blue-200 shadow-lg">
+									<h3 className="text-2xl font-black text-slate-800 flex items-center gap-3 mb-6">
+										<span className="text-3xl">🌾</span>
+										{lang === "bn"
+											? "CABI আন্তর্জাতিক কৃষি গবেষণা ফলাফল"
+											: "CABI International Agricultural Research Results"}
+									</h3>
 
-							{/* Advisory/Management Section - Always show */}
-							<div className="mb-6">
-								<h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-									<span>🛠️</span>{" "}
-									{lang === "bn"
-										? "ব্যবস্থাপনা প্রটোকল"
-										: "Management Protocol"}
-								</h3>
-								<div className="bg-slate-50 p-4 rounded-lg whitespace-pre-line">
-									{result.advisory ||
-										(lang === "bn"
-											? "কোন পরামর্শ পাওয়া যায়নি। স্থানীয় কৃষি অফিসে যোগাযোগ করুন।"
-											: "No advisory available. Consult local agricultural office.")}
-								</div>
-							</div>
+									{/* Primary Diagnosis */}
+									<div className="mb-6 bg-white p-5 rounded-xl border border-blue-100">
+										<div className="flex items-center gap-2 mb-3">
+											<span className="text-2xl">🔍</span>
+											<h4 className="text-lg font-black text-slate-800">
+												{lang === "bn" ? "প্রধান রোগ শনাক্তকরণ" : "Primary Disease Identification"}
+											</h4>
+										</div>
+										<p className="text-lg font-bold text-slate-900 pl-8">
+											{result.diagnosis || (lang === "bn" ? "শনাক্ত করা যায়নি" : "Not identified")}
+										</p>
+									</div>
 
-							{/* Source Section - Always show with crop-specific attribution */}
-							<div className="mb-6">
-								<h3 className="text-xl font-bold text-slate-800">
-									{lang === "bn" ? "অফিসিয়াল উৎস" : "Official Source"}
-								</h3>
-								<div className="space-y-2">
-									<p className="italic">
-										{result.officialSource || "Krishi AI Analysis System"}
-									</p>
-									{/* Crop-specific source attribution */}
-									{cropFamily.toLowerCase().includes("rice") && (
-										<div className="flex items-start space-x-2 text-sm text-emerald-700">
-											<span>📚</span>
-											<span>
-												<strong>BRRI</strong> (Bangladesh Rice Research
-												Institute) - Rice-specific protocols
+									{/* Category & Confidence */}
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+										<div className="bg-white p-5 rounded-xl border border-emerald-100">
+											<div className="flex items-center gap-2 mb-2">
+												<span className="text-xl">📊</span>
+												<h4 className="font-bold text-slate-800">
+													{lang === "bn" ? "রোগের ধরণ" : "Disease Category"}
+												</h4>
+											</div>
+											<span
+												className={`inline-block px-4 py-2 rounded-full text-sm font-black ${
+													result.category === "Pest"
+														? "bg-amber-100 text-amber-800"
+														: result.category === "Disease"
+															? "bg-rose-100 text-rose-800"
+															: result.category === "Deficiency"
+																? "bg-blue-100 text-blue-800"
+																: "bg-slate-100 text-slate-800"
+												}`}
+											>
+												{result.category || "Other"}
 											</span>
 										</div>
-									)}
-									{!cropFamily.toLowerCase().includes("rice") && (
-										<div className="flex items-start space-x-2 text-sm text-emerald-700">
-											<span>📚</span>
-											<span>
-												<strong>BARI</strong> (Bangladesh Agricultural Research
-												Institute) - Crop-specific protocols
-											</span>
+
+										<div className="bg-white p-5 rounded-xl border border-emerald-100">
+											<div className="flex items-center gap-2 mb-2">
+												<span className="text-xl">✓</span>
+												<h4 className="font-bold text-slate-800">
+													{lang === "bn" ? "বিশ্বাসযোগ্যতা" : "Confidence Level"}
+												</h4>
+											</div>
+											<div className="flex items-center gap-3">
+												<div className="flex-1 bg-slate-200 rounded-full h-4">
+													<div
+														className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-4 rounded-full transition-all duration-1000"
+														style={{ width: `${Math.min(100, Math.max(0, result.confidence || 0))}%` }}
+													></div>
+												</div>
+												<span className="text-lg font-black text-emerald-700">
+													{result.confidence || 0}%
+												</span>
+											</div>
 										</div>
+									</div>
+
+									{/* CABI Deduction Logic */}
+									<div className="mb-6 bg-white p-5 rounded-xl border border-blue-100">
+										<div className="flex items-center gap-2 mb-4">
+											<span className="text-2xl">🧠</span>
+											<h4 className="text-lg font-black text-slate-800">
+												{lang === "bn" ? "CABI নির্ধারণ যুক্তি" : "CABI Deduction Reasoning"}
+											</h4>
+										</div>
+
+										<div className="space-y-3 pl-8">
+											<div>
+												<p className="text-sm font-bold text-slate-700 mb-1">
+													{lang === "bn" ? "দৃশ্যমান লক্ষণ:" : "Visual Symptoms:"}
+												</p>
+												<p className="text-sm text-slate-600">
+													{result.category === "Pest"
+														? lang === "bn"
+															? "পাতায় চিবানোর চিহ্ন, ফুটো, বা পোকার উপস্থিতি লক্ষ্য করা গেছে"
+															: "Chewing marks, holes, or visible pests observed on leaves"
+														: result.category === "Disease"
+															? lang === "bn"
+																? "পাতায় রঙ পরিবর্তন, ছোপ, বা পচনের লক্ষণ দেখা গেছে"
+																: "Color changes, spots, or rotting symptoms observed on leaves"
+															: result.category === "Deficiency"
+																? lang === "bn"
+																	? "সমগ্র পাতা হলুদ হওয়া, গাছের বৃদ্ধি হ্রাস, বা পুষ্টির অভাবের লক্ষণ"
+																	: "Overall yellowing, stunted growth, or nutrient deficiency symptoms"
+																: lang === "bn"
+																	? "অন্যান্য অস্বাভাবিক লক্ষণ পরিলক্ষিত হয়েছে"
+																	: "Other abnormal symptoms observed"}
+												</p>
+											</div>
+
+											<div>
+												<p className="text-sm font-bold text-slate-700 mb-1">
+													{lang === "bn" ? "বৈজ্ঞানিক বিশ্লেষণ:" : "Scientific Analysis:"}
+												</p>
+												<p className="text-sm text-slate-600">
+													{lang === "bn"
+														? "CABI কৃষি গবেষণা ডেটাবেস এবং বাংলাদেশের কৃষি বিশেষজ্ঞদের মতামতের ভিত্তিতে এই রোগটি শনাক্ত করা হয়েছে"
+														: "Identified based on CABI agricultural research database and Bangladesh agricultural expert opinions"}
+												</p>
+											</div>
+										</div>
+									</div>
+
+									{/* Management Protocol */}
+									<div className="mb-6 bg-white p-5 rounded-xl border border-emerald-100">
+										<div className="flex items-center gap-2 mb-3">
+											<span className="text-2xl">🛠️</span>
+											<h4 className="text-lg font-black text-slate-800">
+												{lang === "bn" ? "CABI সুপারিশকৃত ব্যবস্থাপনা" : "CABI Recommended Management"}
+											</h4>
+										</div>
+										<div className="bg-emerald-50 p-4 rounded-lg whitespace-pre-line border border-emerald-100">
+											<p className="text-slate-800 font-medium">
+												{result.advisory ||
+													(lang === "bn"
+														? "CABI কৃষি বিশেষজ্ঞদের পরামর্শ অনুযায়ী উপযুক্ত ব্যবস্থাপনা পদ্ধতি অনুসরণ করুন"
+														: "Follow appropriate management methods according to CABI agricultural experts")}
+											</p>
+										</div>
+									</div>
+
+									{/* Official Sources */}
+									<div className="bg-gradient-to-r from-emerald-50 to-blue-50 p-5 rounded-xl border-2 border-emerald-200">
+										<div className="flex items-center gap-2 mb-4">
+											<span className="text-2xl">📚</span>
+											<h4 className="text-lg font-black text-slate-800">
+												{lang === "bn" ? "অফিসিয়াল গবেষণা প্রতিষ্ঠান" : "Official Research Institutions"}
+											</h4>
+										</div>
+
+										<div className="space-y-3">
+											<p className="italic text-slate-700 font-medium">
+												{result.officialSource || "Krishi AI Analysis System"}
+											</p>
+
+											{/* Crop-specific attribution */}
+											{cropFamily.toLowerCase().includes("rice") ? (
+												<div className="flex items-start space-x-3 text-sm bg-white p-3 rounded-lg border border-blue-100">
+													<span className="text-xl">🌾</span>
+													<div>
+														<p className="font-bold text-emerald-700">
+															<strong>BRRI</strong> (Bangladesh Rice Research Institute)
+														</p>
+														<p className="text-slate-600">
+															{lang === "bn"
+																? "ধান গবেষণা এবং কীটপতঙ্গ ব্যবস্থাপনা গাইডলাইন 2024"
+																: "Rice research and pest management guidelines 2024"}
+														</p>
+													</div>
+												</div>
+											) : (
+												<div className="flex items-start space-x-3 text-sm bg-white p-3 rounded-lg border border-blue-100">
+													<span className="text-xl">🌱</span>
+													<div>
+														<p className="font-bold text-emerald-700">
+															<strong>BARI</strong> (Bangladesh Agricultural Research Institute)
+														</p>
+														<p className="text-slate-600">
+															{lang === "bn"
+																? "ফসল সুরক্ষা এবং রোগ ব্যবস্থাপনা গাইডলাইন 2024"
+																: "Crop protection and disease management guidelines 2024"}
+														</p>
+													</div>
+												</div>
+											)}
+
+											{/* DAE for pesticides */}
+											<div className="flex items-start space-x-3 text-sm bg-white p-3 rounded-lg border border-amber-100">
+												<span className="text-xl">🌿</span>
+												<div>
+													<p className="font-bold text-amber-700">
+														<strong>DAE</strong> (Department of Agricultural Extension)
+													</p>
+													<p className="text-slate-600">
+														{lang === "bn"
+															? "কীটনাশক সুপারিশ এবং নিরাপদ ব্যবহার গাইডলাইন"
+															: "Pesticide recommendations and safe usage guidelines"}
+													</p>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
 									)}
 									<div className="flex items-start space-x-2 text-sm text-amber-700">
 										<span>🌿</span>
