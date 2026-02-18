@@ -40,7 +40,7 @@ const OptimizedAnalyzer: React.FC<OptimizedAnalyzerProps> = ({
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const mediaStreamRef = useRef<MediaStream | null>(null);
 
-	// Simulate loading steps for better UX
+	// Simulate loading steps
 	useEffect(() => {
 		let interval: NodeJS.Timeout;
 		if (isLoading) {
@@ -186,7 +186,7 @@ const OptimizedAnalyzer: React.FC<OptimizedAnalyzerProps> = ({
 
 	const handleSaveReport = () => {
 		if (result && onSaveReport) {
-			// Create a copy without id and timestamp for the report
+			// Create report without id and timestamp
 			const { id, timestamp, ...reportData } = result;
 			onSaveReport(reportData);
 		}
