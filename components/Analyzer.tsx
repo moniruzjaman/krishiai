@@ -578,10 +578,17 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 											controls
 										/>
 									) : (
+										// Fixed image display with proper error handling
 										<img
 											src={selectedMedia}
+											onError={(e) => {
+												console.error("Image load failed:", e);
+												// Fallback to placeholder if image fails to load
+												setSelectedMedia(null);
+											}}
 											className="w-full h-full object-cover"
 											alt="Scan"
+											loading="lazy"
 										/>
 									)}
 									<button
@@ -638,10 +645,19 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 									if (file) {
 										const reader = new FileReader();
 										reader.onloadend = () => {
-											setSelectedMedia(reader.result as string);
-											setMimeType(file.type);
-											setPrecisionFields(null);
-											setResult(null);
+											const result = reader.result as string;
+											// Ensure proper data URL format
+											if (result && result.startsWith("data:")) {
+												setSelectedMedia(result);
+												setMimeType(file.type);
+												setPrecisionFields(null);
+												setResult(null);
+											} else {
+												console.error("Invalid file data:", result);
+											}
+										};
+										reader.onerror = (error) => {
+											console.error("File reading error:", error);
 										};
 										reader.readAsDataURL(file);
 									}
@@ -657,10 +673,19 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 									if (file) {
 										const reader = new FileReader();
 										reader.onloadend = () => {
-											setSelectedMedia(reader.result as string);
-											setMimeType(file.type);
-											setPrecisionFields(null);
-											setResult(null);
+											const result = reader.result as string;
+											// Ensure proper data URL format
+											if (result && result.startsWith("data:")) {
+												setSelectedMedia(result);
+												setMimeType(file.type);
+												setPrecisionFields(null);
+												setResult(null);
+											} else {
+												console.error("Invalid file data:", result);
+											}
+										};
+										reader.onerror = (error) => {
+											console.error("File reading error:", error);
 										};
 										reader.readAsDataURL(file);
 									}
