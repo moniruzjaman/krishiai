@@ -5,8 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: {
-    // Vite uses import.meta.env, but we also support process.env for compatibility
-    'process.env': process.env,
+    // Only expose specific env variables, not the entire process.env
     'process.env.API_KEY': JSON.stringify(process.env.API_KEY || ''),
     'process.env.SUPABASE_KEY': JSON.stringify(process.env.SUPABASE_KEY || ''),
     // Map Vite env to process.env for Firebase/Supabase SDKs

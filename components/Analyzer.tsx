@@ -479,23 +479,23 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 				protocol="BARC/BARI/BRRI Grounded"
 				source="Authentic BD Government Repositories"
 				lang={lang}
-				onBack={onBack || (() => {})}
+				onBack={onBack || (() => { })}
 				icon="🔬"
 				themeColor="emerald"
 				guideSteps={
 					lang === "bn"
 						? [
-								"শস্য নির্বাচন করুন বা আক্রান্ত অংশের ছবি তুলুন।",
-								"লাইভ ক্যামেরা ব্যবহার করে সরাসরি মাঠ থেকে ডায়াগনোসিস করুন।",
-								"তথ্যসূত্র যাচাই করতে রিপোর্টের নিচের লিংকে ক্লিক করুন।",
-								"সকল পরামর্শ বিএআরআই (BARI) বা বিআরআরআই (BRRI) এর প্রটোকল অনুযায়ী তৈরি।",
-							]
+							"শস্য নির্বাচন করুন বা আক্রান্ত অংশের ছবি তুলুন।",
+							"লাইভ ক্যামেরা ব্যবহার করে সরাসরি মাঠ থেকে ডায়াগনোসিস করুন।",
+							"তথ্যসূত্র যাচাই করতে রিপোর্টের নিচের লিংকে ক্লিক করুন।",
+							"সকল পরামর্শ বিএআরআই (BARI) বা বিআরআরআই (BRRI) এর প্রটোকল অনুযায়ী তৈরি।",
+						]
 						: [
-								"Select crop or take photo of affected part.",
-								"Use Live Camera for real-time field diagnosis.",
-								"Click verification links at the bottom of report for authentic sources.",
-								"All advisories follow BARI/BRRI plant protection protocols.",
-							]
+							"Select crop or take photo of affected part.",
+							"Use Live Camera for real-time field diagnosis.",
+							"Click verification links at the bottom of report for authentic sources.",
+							"All advisories follow BARI/BRRI plant protection protocols.",
+						]
 				}
 			/>
 
@@ -954,15 +954,14 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 									{lang === "bn" ? "বিভাগ" : "Category"}
 								</h3>
 								<span
-									className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${
-										result.category === "Pest"
+									className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${result.category === "Pest"
 											? "bg-amber-100 text-amber-800"
 											: result.category === "Disease"
 												? "bg-rose-100 text-rose-800"
 												: result.category === "Deficiency"
 													? "bg-blue-100 text-blue-800"
 													: "bg-slate-100 text-slate-800"
-									}`}
+										}`}
 								>
 									{result.category || "Other"}
 								</span>
@@ -1023,15 +1022,14 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 												</h4>
 											</div>
 											<span
-												className={`inline-block px-4 py-2 rounded-full text-sm font-black ${
-													result.category === "Pest"
+												className={`inline-block px-4 py-2 rounded-full text-sm font-black ${result.category === "Pest"
 														? "bg-amber-100 text-amber-800"
 														: result.category === "Disease"
 															? "bg-rose-100 text-rose-800"
 															: result.category === "Deficiency"
 																? "bg-blue-100 text-blue-800"
 																: "bg-slate-100 text-slate-800"
-												}`}
+													}`}
 											>
 												{result.category || "Other"}
 											</span>
@@ -1182,16 +1180,6 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 												</div>
 											</div>
 										</div>
-									</div>
-								</div>
-							</div>
-									)}
-									<div className="flex items-start space-x-2 text-sm text-amber-700">
-										<span>🌿</span>
-										<span>
-											<strong>DAE</strong> (Department of Agricultural
-											Extension) - Pesticide recommendations
-										</span>
 									</div>
 								</div>
 							</div>
