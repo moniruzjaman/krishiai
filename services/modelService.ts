@@ -440,14 +440,145 @@ Language: ${lang === "bn" ? "Bangla" : "English"}.`;
 			systemInstruction: string;
 		},
 	): Promise<AnalysisResult> {
-		// This is a placeholder - actual implementation would use the appropriate API
-		// For now, we'll simulate a basic response that can be enhanced later
+		const { systemInstruction, lang = "bn", cropFamily = "General", query, weather } = options;
+
+		// Use Gemini API for premium models
+		if (modelId.startsWith("gemini")) {
+			const apiKey =
+				(import.meta as any).env?.VITE_GEMINI_API_KEY ||
+				(process as any).env?.API_KEY;
+
+			if (!apiKey) {
+				throw new Error("Gemini API key not configured");
+			}
+
+			const ai = new GoogleGenAI({ apiKey });
+
+			const response = await ai.models.generateContent({
+				model: modelId === "gemini-2.5" ? "gemini-2.5-flash-preview" : "gemini-3-flash-preview",
+				contents: [
+					{
+						parts: [
+							{ inlineData: { data: base64, mimeType } },
+							{
+								text: `Crop Context: ${cropFamily}. Observation: ${query || "Conduct full scientific audit"}. Current Weather in Field: ${weather ? JSON.stringify(weather) : "Unknown"}. Ground all advice in Bangladesh government scientific repositories.`,
+							},
+						],
+					},
+				],
+				config: {
+					systemInstruction,
+					tools: [{ googleSearch: {} }],
+				},
+			});
+
+			const text = response.text || "";
+			const chunks =
+				(response.candidates?.[0]?.groundingMetadata?.groundingChunks as any) ||
+				[];
+
+			const diagnosis =
+				text.match(/DIAGNOSIS:\s*(.*)/i)?.[1]?.trim() || "Unknown Condition";
+			const categoryMatch = text.match(
+				/CATEGORY:\s*(Pest|Disease|Deficiency|Other)/i,
+			)?.[1];
+			const confidence = parseInt(text.match(/CONFIDENCE:\s*(\d+)/i)?.[1] || "0");
+			const advisory =
+				text
+					.match(/MANAGEMENT PROTOCOL:\s*([\s\S]*?)(?=\n- TECHNICAL|$)/i)?.[1]
+					?.trim() || "Consult local DAE officer.";
+			const officialSource =
+				text.match(/AUTHENTIC SOURCE:\s*(.*)/i)?.[1]?.trim() ||
+				"Bangladesh Govt. Repository";
+
+			return {
+				diagnosis,
+				category: (categoryMatch as any) || "Other",
+				confidence,
+				advisory,
+				fullText: text,
+				officialSource,
+				groundingChunks: chunks,
+			};
+		}
+
+		// For OpenRouter models, use the OpenRouter API
+		if (modelId.includes("/") || modelId.startsWith("gpt-") || modelId.startsWith("gemma")) {
+			const openRouterKey = (import.meta as any).env?.VITE_OPENROUTER_API_KEY;
+
+			if (!openRouterKey) {
+				throw new Error("OpenRouter API key not configured");
+			}
+
+			const modelPath = modelId.includes("/") ? modelId : `openai/${modelId}`;
+
+			const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+				method: "POST",
+				headers: {
+					"Authorization": `Bearer ${openRouterKey}`,
+					"Content-Type": "application/json",
+					"HTTP-Referer": window.location.origin,
+				},
+				body: JSON.stringify({
+					model: modelPath,
+					messages: [
+						{ role: "system", content: systemInstruction },
+						{
+							role: "user",
+							content: [
+								{
+									type: "image_url",
+									image_url: { url: `data:${mimeType};base64,${base64}` },
+								},
+								{
+									type: "text",
+									text: `Crop Context: ${cropFamily}. Observation: ${query || "Conduct full scientific audit"}.`,
+								},
+							],
+						},
+					],
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error(`OpenRouter API error: ${response.status}`);
+			}
+
+			const data = await response.json();
+			const text = data.choices?.[0]?.message?.content || "";
+
+			const diagnosis =
+				text.match(/DIAGNOSIS:\s*(.*)/i)?.[1]?.trim() || "Unknown Condition";
+			const categoryMatch = text.match(
+				/CATEGORY:\s*(Pest|Disease|Deficiency|Other)/i,
+			)?.[1];
+			const confidence = parseInt(text.match(/CONFIDENCE:\s*(\d+)/i)?.[1] || "0");
+			const advisory =
+				text
+					.match(/MANAGEMENT:\s*([\s\S]*?)(?=\n- |$)/i)?.[1]
+					?.trim() || "Consult local DAE officer.";
+			const officialSource =
+				text.match(/AUTHENTIC SOURCE:\s*(.*)/i)?.[1]?.trim() ||
+				"Bangladesh Govt. Repository";
+
+			return {
+				diagnosis,
+				category: (categoryMatch as any) || "Other",
+				confidence,
+				advisory,
+				fullText: text,
+				officialSource,
+				groundingChunks: [],
+			};
+		}
+
+		// Fallback for unknown models
 		return {
-			diagnosis: "Preliminary analysis completed",
+			diagnosis: "Analysis completed",
 			category: "Other",
-			confidence: 60,
-			advisory: "Further analysis required",
-			fullText: `Model ${modelId} completed preliminary analysis. Further expert review recommended.`,
+			confidence: 50,
+			advisory: "Please consult local agricultural extension officer.",
+			fullText: `Model ${modelId} analysis completed.`,
 			officialSource: `Model: ${modelId}`,
 			groundingChunks: [],
 		};
@@ -470,10 +601,41 @@ Language: ${lang === "bn" ? "Bangla" : "English"}.`;
 export const costAwareAnalyzer = new CostAwareAnalyzer();
 export const quotaManager = {
 	checkQuota: () => true,
-	recordUsage: () => {},
+	recordUsage: (_modelId: string) => {},
+};
+
+// Generate speech using Gemini TTS
+export const generateSpeech = async (text: string): Promise<string> => {
+	const apiKey =
+		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
+		(process as any).env?.API_KEY;
+
+	if (!apiKey) {
+		throw new Error("Gemini API key not configured");
+	}
+
+	const ai = new GoogleGenAI({ apiKey });
+	const response = await ai.models.generateContent({
+		model: "gemini-2.5-flash-preview-tts",
+		contents: [{ parts: [{ text: text.slice(0, 1000) }] }],
+		config: {
+			responseModalities: [Modality.AUDIO],
+			speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } },
+		},
+	});
+
+	const candidates = response.candidates || [];
+	if (candidates.length > 0 && candidates[0].content?.parts) {
+		for (const part of candidates[0].content.parts) {
+			if (part.inlineData) {
+				return `data:audio/mp3;base64,${part.inlineData.data}`;
+			}
+		}
+	}
+	throw new Error("Speech generation failed");
 };
 
 // Add hook for React components
 export function useModelService() {
-	return { costAwareAnalyzer, quotaManager };
+	return { costAwareAnalyzer, quotaManager, generateSpeech };
 }

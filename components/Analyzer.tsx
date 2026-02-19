@@ -363,8 +363,8 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 						"Speech generation failed (using OpenRouter?), falling back to Gemini...",
 					);
 					// Fallback to original geminiService.generateSpeech
-					const { generateSpeech } = await import("../services/geminiService");
-					audioBase64 = await generateSpeech(
+					const { generateSpeech: geminiGenerateSpeech } = await import("../services/geminiService");
+					audioBase64 = await geminiGenerateSpeech(
 						result.fullText.replace(/[*#_~]/g, ""),
 					);
 				}
