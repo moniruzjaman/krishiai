@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Modality, Type } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult, GroundingChunk, FlashCard, AgriTask, UserCrop, User, WeatherData, CropDiseaseReport, AgriQuizQuestion, Language, UserRole } from "../types";
 import { AEZInfo } from "./locationService";
 
@@ -141,18 +141,20 @@ export const generateAgriImage = async (prompt: string): Promise<string> => {
 };
 
 export const generateSpeech = async (text: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-preview-tts",
-    contents: [{ parts: [{ text: text.slice(0, 1000) }] }],
-    config: {
-      responseModalities: [Modality.AUDIO],
-      speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
-    },
+  const apiBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiBaseUrl}/api/tts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text.slice(0, 1000) }),
   });
-  const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-  if (!base64Audio) throw new Error("Speech generation failed");
-  return base64Audio;
+  if (!response.ok) {
+    throw new Error(`TTS request failed: ${response.status}`);
+  }
+  const data = await response.json();
+  if (!data.success) {
+    throw new Error(data.error || 'Speech generation failed');
+  }
+  return data.audio;
 };
 
 export const getLiveWeather = async (lat: number, lng: number, force = false, lang: Language = 'bn'): Promise<WeatherData> => {

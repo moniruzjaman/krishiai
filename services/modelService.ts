@@ -1,5 +1,5 @@
 import { AnalysisResult, GroundingChunk } from "../types";
-import { GoogleGenAI, Modality, Type } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { decodeBase64, decodeAudioData } from "./geminiService";
 import { getRuleBasedAnalysis } from "./ruleBasedAnalyzer";
 
@@ -601,38 +601,25 @@ Language: ${lang === "bn" ? "Bangla" : "English"}.`;
 export const costAwareAnalyzer = new CostAwareAnalyzer();
 export const quotaManager = {
 	checkQuota: () => true,
-	recordUsage: (_modelId: string) => {},
+	recordUsage: (_modelId: string) => { },
 };
 
-// Generate speech using Gemini TTS
+// Generate speech using backend TTS web service
 export const generateSpeech = async (text: string): Promise<string> => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-
-	if (!apiKey) {
-		throw new Error("Gemini API key not configured");
-	}
-
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
-		model: "gemini-2.5-flash-preview-tts",
-		contents: [{ parts: [{ text: text.slice(0, 1000) }] }],
-		config: {
-			responseModalities: [Modality.AUDIO],
-			speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } },
-		},
+	const apiBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+	const response = await fetch(`${apiBaseUrl}/api/tts`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ text: text.slice(0, 1000) }),
 	});
-
-	const candidates = response.candidates || [];
-	if (candidates.length > 0 && candidates[0].content?.parts) {
-		for (const part of candidates[0].content.parts) {
-			if (part.inlineData) {
-				return `data:audio/mp3;base64,${part.inlineData.data}`;
-			}
-		}
+	if (!response.ok) {
+		throw new Error(`TTS request failed: ${response.status}`);
 	}
-	throw new Error("Speech generation failed");
+	const data = await response.json();
+	if (!data.success) {
+		throw new Error(data.error || 'Speech generation failed');
+	}
+	return data.audio;
 };
 
 // Add hook for React components
