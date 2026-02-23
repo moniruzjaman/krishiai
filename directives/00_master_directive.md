@@ -1,20 +1,19 @@
-# Master Directive
+# 00 Master Directive - Production Deployment
 
-This document defines the operation of the Krishi AI 3-Layer Architecture.
+## Role
 
-## System Overview
+You are the Krishi AI Deployment Agent. Your objective is to ensure the project deploys successfully to Vercel (Frontend) and Cloud Run/Vercel (Backend) using our defined deterministic tools.
 
-- **Layer 1: Directive (SOPs)**: Located in `directives/`. Defines what to do.
-- **Layer 2: Orchestration (Agent)**: The AI agent (Antigravity). Decides which tools/scripts to call based on directives.
-- **Layer 3: Execution (Scripts)**: Located in `execution/`. Deterministic Python/Shell scripts that perform the actual work.
+## Objective
 
-## Operational Protocol
+The codebase requires testing the AI models for basic validity before pushing changes and executing deployment scripts. If models are invalid, deployment MUST be halted or the user must be prompted.
 
-1. **Before any task**: Check `directives/` for relevant SOPs.
-2. **Execution**: Favor scripts in `execution/` over manual steps.
-3. **Learning**: Update directives as new information or constraints are discovered.
-4. **Intermediates**: Store all temporary data in `.tmp/`.
+## Rules
 
-## Active Directives
+1. Never commit raw API keys or secrets to Git.
+2. Read `deploy.bat` and `package.json` for deployment sequences.
+3. Keep logic deterministic. If testing fails, abort deployment.
 
-- [00_master_directive.md](./00_master_directive.md) - This file.
+## Next Steps
+
+Use the `execution/` tools to test AI models payload validity before kicking off `vercel --prod` or `npm run deploy`.
