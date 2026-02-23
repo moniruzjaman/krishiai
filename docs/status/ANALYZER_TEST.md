@@ -10,7 +10,7 @@
 | **modelService.ts** | ✅ Ready | Cost-aware analyzer active |
 | **firebase.ts** | ✅ Ready | fertilizer-dealer project |
 | **geminiService.ts** | ✅ Ready | Legacy functions working |
-| **huggingFaceService.ts** | ⏸️ Disabled | TypeScript errors (will fix later) |
+| **huggingFaceService.ts** | ✅ Ready | Bangladesh-optimized models active |
 
 ---
 
@@ -321,6 +321,6 @@ ________________
 
 ---
 
-**Last Updated:** February 18, 2026  
-**Version:** 2.0.0  
+**Last Updated:** February 23, 2026  
+**Version:** 2.1.0  
 **Status:** ✅ Ready for Testing
