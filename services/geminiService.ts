@@ -14,6 +14,61 @@ import {
 } from "../types";
 import { AEZInfo } from "./locationService";
 
+// Environment validation - warn if using placeholder values
+const PLACEHOLDER_VALUES = [
+	'your_gemini_api_key_here',
+	'your_key_here',
+	'sk-or-your_openrouter_key_here',
+	'hf_your_huggingface_token_here',
+	'sk-proj-your_openai_key_here',
+];
+
+/**
+ * Validates environment variables and warns if placeholder values are detected.
+ * Call this at application startup or before making API calls.
+ */
+export const validateEnvironment = (): { valid: boolean; warnings: string[] } => {
+	const warnings: string[] = [];
+
+	const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+	const openrouterKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+	const hfToken = import.meta.env.VITE_HF_TOKEN;
+	const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
+	if (!geminiKey || PLACEHOLDER_VALUES.some(p => geminiKey.includes(p.replace('_here', '')))) {
+		warnings.push('VITE_GEMINI_API_KEY is not configured or using placeholder value. AI features may not work.');
+	}
+
+	if (!openrouterKey || PLACEHOLDER_VALUES.some(p => openrouterKey.includes('your_openrouter'))) {
+		warnings.push('VITE_OPENROUTER_API_KEY is not configured or using placeholder value. Free-tier models may not work.');
+	}
+
+	if (!hfToken || PLACEHOLDER_VALUES.some(p => hfToken.includes('your_huggingface'))) {
+		warnings.push('VITE_HF_TOKEN is not configured or using placeholder value. HuggingFace models may not work.');
+	}
+
+	if (openaiKey && PLACEHOLDER_VALUES.some(p => openaiKey.includes('your_openai'))) {
+		warnings.push('VITE_OPENAI_API_KEY appears to be a placeholder value. OpenAI features may not work.');
+	}
+
+	// Log warnings in development
+	if (warnings.length > 0 && import.meta.env.DEV) {
+		console.warn('⚠️ Environment Configuration Warnings:');
+		warnings.forEach(w => console.warn(`  - ${w}`));
+		console.warn('Please update your .env file with valid API keys. See .env.example for reference.');
+	}
+
+	return {
+		valid: warnings.length === 0,
+		warnings
+	};
+};
+
+// Run validation on module load in development mode
+if (import.meta.env.DEV) {
+	validateEnvironment();
+}
+
 const extractJSON = <T>(text: string, defaultValue: T): T => {
 	if (!text) return defaultValue;
 	try {
@@ -36,7 +91,7 @@ const withRetry = async <T>(
 		} catch (error: any) {
 			lastError = error;
 			const errorStatus = error?.status || error?.error?.code;
-			if (errorStatus === 500 || errorStatus === 429) {
+			if (errorStatus === 500 || errorStatus === 429 || errorStatus === 500) {
 				const delay = Math.pow(2, i) * 1500;
 				await new Promise((resolve) => setTimeout(resolve, delay));
 				continue;
@@ -53,6 +108,114 @@ export const decodeBase64 = (base64: string): Uint8Array => {
 	for (let i = 0; i < binaryString.length; i++)
 		bytes[i] = binaryString.charCodeAt(i);
 	return bytes;
+};
+
+const getOpenRouterKey = () => (import.meta as any).env?.VITE_OPENROUTER_API_KEY || "";
+
+const callOpenRouterFallback = async (options: any): Promise<any> => {
+	const openRouterKey = getOpenRouterKey();
+	if (!openRouterKey) throw new Error("No VITE_OPENROUTER_API_KEY provided for fallback.");
+
+	let messages: any[] = [];
+	const { contents, config } = options;
+
+	if (config?.systemInstruction) {
+		messages.push({ role: "system", content: config.systemInstruction });
+	}
+
+	if (typeof contents === "string") {
+		messages.push({ role: "user", content: contents });
+	} else if (Array.isArray(contents)) {
+		if (contents[0]?.role) {
+			for (const msg of contents) {
+				const role = msg.role === "model" ? "assistant" : "user";
+				const parts = msg.parts || [];
+				let text = "";
+				const openRouterContent: any[] = [];
+				let hasImage = false;
+				for (const part of parts) {
+					if (part.text) {
+						text += part.text;
+						openRouterContent.push({ type: "text", text: part.text });
+					} else if (part.inlineData) {
+						hasImage = true;
+						openRouterContent.push({
+							type: "image_url",
+							image_url: { url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` }
+						});
+					}
+				}
+				messages.push({ role, content: hasImage ? openRouterContent : text });
+			}
+		} else if (contents[0]?.parts) {
+			const openRouterContent: any[] = [];
+			let hasImage = false;
+			for (const part of contents[0].parts) {
+				if (part.text) {
+					openRouterContent.push({ type: "text", text: part.text });
+				} else if (part.inlineData) {
+					hasImage = true;
+					openRouterContent.push({
+						type: "image_url",
+						image_url: { url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` }
+					});
+				}
+			}
+			messages.push({ role: "user", content: hasImage ? openRouterContent : (openRouterContent[0]?.text || "Query") });
+		}
+	}
+
+	const isVision = messages.some(m => Array.isArray(m.content) && m.content.some((c: any) => c.type === "image_url"));
+	const fallbackModel = isVision ? "openai/gpt-4o-2024-11-20" : "openai/gpt-4o-mini";
+
+	const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${openRouterKey}`,
+			"Content-Type": "application/json"
+		},
+		body: JSON.stringify({
+			model: fallbackModel,
+			messages,
+			response_format: config?.responseMimeType === "application/json" ? { type: "json_object" } : undefined
+		})
+	});
+
+	if (!response.ok) {
+		const err = await response.text();
+		throw new Error(`OpenRouter Fallback Failed: ${response.status} ${err}`);
+	}
+
+	const data = await response.json();
+	const text = data.choices?.[0]?.message?.content || "";
+
+	return {
+		text: text,
+		candidates: [{
+			content: { parts: [{ text }] },
+			groundingMetadata: { groundingChunks: [] }
+		}]
+	};
+};
+
+const generateContentWithFallback = async (options: any): Promise<any> => {
+	return await withRetry(async () => {
+		try {
+			const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (process as any).env?.API_KEY;
+			const ai = new GoogleGenAI({ apiKey });
+			return await ai.models.generateContent(options);
+		} catch (error: any) {
+			const errorStatus = error?.status || error?.error?.code;
+			if (errorStatus === 429 || errorStatus === 500 || errorStatus === 503 || error.message?.includes("quota")) {
+				console.warn("Gemini API error (Quota/503). Falling back to OpenRouter...");
+				if (options.model === 'gemini-2.5-flash-image' || options.model === 'imagen-3.0-generate-001') {
+					throw error;
+				}
+				return await callOpenRouterFallback(options);
+			}
+			throw error;
+		}
+	});
 };
 
 export const decodeAudioData = async (
