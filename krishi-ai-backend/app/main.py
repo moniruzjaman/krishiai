@@ -28,11 +28,25 @@ APP_NAME = os.environ.get("APP_NAME", "Krishi AI Backend")
 APP_VERSION = os.environ.get("APP_VERSION", "4.0.0")
 DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 
-# CORS settings
-ALLOWED_ORIGINS = os.environ.get(
-    "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:4173"
-).split(",")
+# CORS settings - Production and development origins
+DEFAULT_ORIGINS = [
+    # Development
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:4173",
+    # Production
+    "https://www.krishiai.live",
+    "https://krishiai.live",
+]
+
+# Get additional origins from environment and combine with defaults
+env_origins = os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ.get("ALLOWED_ORIGINS") else []
+ALLOWED_ORIGINS: List[str] = DEFAULT_ORIGINS + [origin.strip() for origin in env_origins if origin.strip()]
+
+# Note: For Vercel preview deployments, the ALLOWED_ORIGINS env variable should include
+# patterns like "https://krishiai-*.vercel.app" - these need to be handled by the CORS middleware
+# or use a custom origin validator for wildcard matching
 
 
 @asynccontextmanager

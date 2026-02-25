@@ -167,6 +167,14 @@ VITE_GEMINI_API_KEY=your_key_here
 VITE_OPENROUTER_API_KEY=sk-or-your_key_here
 ```
 
+**For Backend Connection:**
+
+```
+VITE_API_BASE_URL=https://your-backend-url.vercel.app
+```
+
+> **Note:** This must be set in Vercel Dashboard under Project Settings → Environment Variables. The backend URL is required for TTS (text-to-speech) and other API features.
+
 **Optional:**
 ```
 VITE_HF_TOKEN=hf_your_token_here
