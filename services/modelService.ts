@@ -134,24 +134,15 @@ export function getOptimalModel(
 ): AIModel {
 	const candidates = Object.values(AVAILABLE_MODELS);
 
-	// Priority order based on budget and capability
-	// Premium > Low-Cost > Free (for best image analysis)
-	let filtered: AIModel[] = [];
+	// Keep strict tier preference for each budget mode.
+	// This prevents low-cost/free fallback from repeatedly selecting premium models.
+	const tierPreference: Record<ModelTier, ModelTier[]> = {
+		premium: ["premium", "low-cost", "free"],
+		"low-cost": ["low-cost", "free", "premium"],
+		free: ["free", "low-cost", "premium"],
+	};
 
-	// Step 1: Filter by budget tier priority
-	if (budget === "premium") {
-		// Premium users get premium models first
-		filtered = candidates.filter((model) => model.tier === "premium");
-	} else if (budget === "low-cost") {
-		// Low-cost users get low-cost or premium (if available)
-		filtered = candidates.filter(
-			(model) => model.tier === "low-cost" || model.tier === "premium",
-		);
-	} else {
-		// free
-		// Free users get all tiers, but sorted by quality
-		filtered = candidates;
-	}
+	let filtered = [...candidates];
 
 	// Step 2: Prioritize vision-capable models for image analysis
 	if (task.includes("image") || task.includes("analyze")) {
@@ -186,12 +177,15 @@ export function getOptimalModel(
 		);
 	}
 
-	// Step 5: Sort by priority: premium > low-cost > free
-	const tierOrder: Record<string, number> = {
-		premium: 3,
-		"low-cost": 2,
-		free: 1,
-	};
+	// Step 5: Sort by selected budget's tier preference
+	const preferredTiers = tierPreference[budget];
+	const tierOrder = preferredTiers.reduce(
+		(acc, tier, index) => {
+			acc[tier] = preferredTiers.length - index;
+			return acc;
+		},
+		{} as Record<ModelTier, number>,
+	);
 	filtered.sort((a, b) => {
 		// First sort by tier
 		const tierDiff = tierOrder[b.tier] - tierOrder[a.tier];
@@ -446,6 +440,7 @@ Language: ${lang === "bn" ? "Bangla" : "English"}.`;
 		if (modelId.startsWith("gemini")) {
 			const apiKey =
 				(import.meta as any).env?.VITE_GEMINI_API_KEY ||
+				(import.meta as any).env?.GEMINI_API_KEY ||
 				(process as any).env?.API_KEY;
 
 			if (!apiKey) {
