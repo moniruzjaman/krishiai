@@ -1,6 +1,6 @@
 import { AnalysisResult, GroundingChunk } from "../types";
 import { GoogleGenAI, Type } from "@google/genai";
-import { decodeBase64, decodeAudioData } from "./geminiService";
+import { decodeBase64, decodeAudioData, generateContentWithFallback } from "./geminiService";
 import { getRuleBasedAnalysis } from "./ruleBasedAnalyzer";
 
 // --- Model Definitions ---
@@ -454,7 +454,7 @@ Language: ${lang === "bn" ? "Bangla" : "English"}.`;
 
 			const ai = new GoogleGenAI({ apiKey });
 
-			const response = await ai.models.generateContent({
+			const response = await generateContentWithFallback({
 				model: modelId === "gemini-2.5" ? "gemini-2.5-flash-preview" : "gemini-3-flash-preview",
 				contents: [
 					{

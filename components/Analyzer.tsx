@@ -274,43 +274,58 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 			}
 		} catch (error: any) {
 			console.error("Analysis Error:", error);
-			if (
-				error.message.includes("fallback") ||
-				error.message.includes("OpenRouter")
-			) {
-				try {
-					const base64 = (selectedMedia || "").split(",")[1];
-					const analysis =
-						(await (modelService as any).geminiProvider?.analyzeImage?.(
-							base64,
-							mimeType,
-							{
-								cropFamily,
-								userRank,
-								query: userQuery,
-								lang,
-								weather: weather || undefined,
-							},
-						)) ||
-						(await (window as any).geminiService?.analyzeCropImage?.(
-							base64,
-							mimeType,
-							{
-								cropFamily,
-								userRank,
-								query: userQuery,
-								lang,
-								weather: weather || undefined,
-							},
-						));
+			
+			// Show error to user
+			const errorMessage = error?.message || "Unknown error occurred";
+			
+			// Always attempt fallback on any error
+			let fallbackSuccess = false;
+			try {
+				const base64 = (mediaToAnalyze || selectedMedia || "").split(",")[1];
+				if (base64) {
+					// Try the legacy geminiService as fallback
+					const analysis = await (window as any).geminiService?.analyzeCropImage?.(
+						base64,
+						typeToAnalyze || mimeType,
+						{
+							cropFamily,
+							userRank,
+							query: userQuery,
+							lang,
+							weather: weather || undefined,
+						},
+					);
 					if (analysis) {
 						setResult(analysis);
 						if (speechEnabled) playSpeech(analysis.fullText);
 						if (onAction) onAction();
+						fallbackSuccess = true;
+						console.log("Fallback analysis succeeded");
 					}
-				} catch (fallbackErr) {
-					console.error("Fallback also failed:", fallbackErr);
 				}
+			} catch (fallbackErr) {
+				console.error("Fallback also failed:", fallbackErr);
+			}
+			
+			// If fallback failed, show error to user
+			if (!fallbackSuccess) {
+				const userMessage = lang === "bn" 
+					? "বিশ্লেষণ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
+					: "Analysis failed. Please try again.";
+				console.warn("Analysis Error:", errorMessage);
+				
+				// Set a fallback result so UI doesn't look broken
+				setResult({
+					diagnosis: lang === "bn" ? "বিশ্লেষণ ব্যর্থ" : "Analysis Failed",
+					category: "Other",
+					confidence: 0,
+					advisory: lang === "bn" 
+						? "অনুগ্রহ করে আপনার ইন্টারনেট সংযোগ পরীক্ষা করুন এবং আবার চেষ্টা করুন।"
+						: "Please check your internet connection and try again.",
+					fullText: userMessage,
+					officialSource: "Error State",
+					groundingChunks: [],
+				});
 			}
 		} finally {
 			setIsLoading(false);

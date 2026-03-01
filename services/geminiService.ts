@@ -91,7 +91,7 @@ const withRetry = async <T>(
 		} catch (error: any) {
 			lastError = error;
 			const errorStatus = error?.status || error?.error?.code;
-			if (errorStatus === 500 || errorStatus === 429 || errorStatus === 500) {
+			if (errorStatus === 500 || errorStatus === 429 || errorStatus === 503) {
 				const delay = Math.pow(2, i) * 1500;
 				await new Promise((resolve) => setTimeout(resolve, delay));
 				continue;
@@ -198,24 +198,36 @@ const callOpenRouterFallback = async (options: any): Promise<any> => {
 	};
 };
 
-const generateContentWithFallback = async (options: any): Promise<any> => {
-	return await withRetry(async () => {
-		try {
-			const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (process as any).env?.API_KEY;
-			const ai = new GoogleGenAI({ apiKey });
-			return await ai.models.generateContent(options);
-		} catch (error: any) {
-			const errorStatus = error?.status || error?.error?.code;
-			if (errorStatus === 429 || errorStatus === 500 || errorStatus === 503 || error.message?.includes("quota")) {
-				console.warn("Gemini API error (Quota/503). Falling back to OpenRouter...");
-				if (options.model === 'gemini-2.5-flash-image' || options.model === 'imagen-3.0-generate-001') {
-					throw error;
-				}
-				return await callOpenRouterFallback(options);
-			}
+export const generateContentWithFallback = async (options: any): Promise<any> => {
+	try {
+		const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (process as any).env?.API_KEY;
+		const ai = new GoogleGenAI({ apiKey });
+		return await ai.models.generateContent(options);
+	} catch (error: any) {
+		// Only fallback on retryable errors (quota/rate limiting/server errors)
+		const errorStatus = error?.status || error?.error?.code;
+		const isRetryable = 
+			errorStatus === 429 || 
+			errorStatus === 403 || // API key blocked/leaked
+			errorStatus === 500 || 
+			errorStatus === 503 || 
+			errorStatus === 504 ||
+			error.message?.includes("quota") || 
+			error.message?.includes("rate limit") ||
+			error.message?.includes("timeout") ||
+			error.message?.includes("leaked") ||
+			error.message?.includes("PERMISSION_DENIED");
+		
+		if (!isRetryable) {
+			throw error; // Re-throw non-retryable errors immediately
+		}
+		
+		console.warn("Gemini API error (Retryable). Falling back to OpenRouter...", errorStatus);
+		if (options.model === 'gemini-2.5-flash-image' || options.model === 'imagen-3.0-generate-001') {
 			throw error;
 		}
-	});
+		return await callOpenRouterFallback(options);
+	}
 };
 
 export const decodeAudioData = async (
@@ -252,13 +264,7 @@ export const analyzeCropImage = async (
 ): Promise<AnalysisResult> => {
 	const lang = options?.lang || "bn";
 
-	return await withRetry(async () => {
-		const apiKey =
-			(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-			(process as any).env?.API_KEY;
-		const ai = new GoogleGenAI({ apiKey });
-
-		const systemInstruction = `Role: Senior Scientific Officer (Plant Pathology / Soil Science / Entomology) at BARI/BRRI/DAE, Bangladesh.
+	const systemInstruction = `Role: Senior Scientific Officer (Plant Pathology / Soil Science / Entomology) at BARI/BRRI/DAE, Bangladesh.
     Task: Precisely identify Pests, Diseases, or Nutrient Deficiencies in the image specimen.
 
     STRICT GROUNDING RULES:
@@ -279,18 +285,19 @@ export const analyzeCropImage = async (
 
     Language: ${lang === "bn" ? "Bangla" : "English"}. Use Google Search tool to verify information and provide citations in grounding metadata.`;
 
-		const response = await ai.models.generateContent({
+	return await withRetry(async () => {
+		const response = await generateContentWithFallback({
 			model: "gemini-3-flash-preview",
 			contents: [
 				{
 					parts: [
 						{ inlineData: { data: base64Data, mimeType } },
 						{
-							text: `Crop Context: ${options?.cropFamily || "General Agricultural Specimen"}. Observation: ${options?.query || "Conduct full scientific audit"}. Current Weather in Field: ${options?.weather ? JSON.stringify(options.weather) : "Unknown"}. Ground all advice in Bangladesh government scientific repositories.`,
-						},
-					],
-				},
-			],
+						text: `Crop Context: ${options?.cropFamily || "General Agricultural Specimen"}. Observation: ${options?.query || "Conduct full scientific audit"}. Current Weather in Field: ${options?.weather ? JSON.stringify(options.weather) : "Unknown"}. Ground all advice in Bangladesh government scientific repositories.`,
+					},
+				],
+			},
+		],
 			config: {
 				systemInstruction,
 				tools: [{ googleSearch: {} }],
@@ -329,11 +336,7 @@ export const analyzeCropImage = async (
 };
 
 export const generateAgriImage = async (prompt: string): Promise<string> => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-2.5-flash-image",
 		contents: [{ parts: [{ text: prompt }] }],
 		config: { imageConfig: { aspectRatio: "16:9" } },
@@ -376,11 +379,7 @@ export const getLiveWeather = async (
 	force = false,
 	lang: Language = "bn",
 ): Promise<WeatherData> => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Provide agricultural weather for Lat: ${lat}, Lng: ${lng}. Include temp, condition, humidity, windSpeed, rainProbability, evapotranspiration, soilTemperature, solarRadiation, gdd, diseaseRisk. JSON format. Lang: ${lang === "bn" ? "Bangla" : "English"}`,
 		config: {
@@ -408,12 +407,8 @@ export const sendChatMessage = async (
 	weather?: WeatherData,
 	crops?: UserCrop[],
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
 	const context = `User Role: ${role}. Persona: ${persona}. Current Weather: ${JSON.stringify(weather)}. User Crops: ${JSON.stringify(crops)}. Respond as a BD Govt Agri-Consultant. Ground advice in dae.gov.bd.`;
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: [
 			...history,
@@ -430,11 +425,7 @@ export const sendChatMessage = async (
 };
 
 export const searchAgriculturalInfo = async (query: string) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Answer the following agri query using Bangladesh government official data: ${query}`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -455,11 +446,7 @@ export const getAIPlantNutrientAdvice = async (
 	unit: string,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Calculate fertilizer requirements for ${crop} in ${aez}. Fertility: ${soil}. Area: ${areaSize} ${unit}. Follow BARC 2024. Lang: ${lang}.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -468,11 +455,7 @@ export const getAIPlantNutrientAdvice = async (
 };
 
 export const getBiocontrolExpertAdvice = async (query: string) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Biological control methods for: ${query} in Bangladesh. Grounded in BARI research.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -481,12 +464,8 @@ export const getBiocontrolExpertAdvice = async (query: string) => {
 };
 
 export const interpretSoilReportAI = async (inputs: any) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
 	try {
-		const response = await ai.models.generateContent({
+		const response = await generateContentWithFallback({
 			model: "gemini-3-flash-preview",
 			contents: `Interpret soil lab report: ${JSON.stringify(inputs)}. Use SRDI/BARC standards.`,
 			config: { tools: [{ googleSearch: {} }] },
@@ -507,11 +486,7 @@ export const getPesticideExpertAdvice = async (
 	query: string,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `DAE Pesticide Dose and Safety for: ${query}. Site: dae.gov.bd. Lang: ${lang}.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -529,11 +504,7 @@ export const analyzePesticideMixing = async (
 	weather?: WeatherData,
 	lang?: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Can these chemicals be mixed? ${JSON.stringify(items)}. Follow IRAC/FRAC and DAE. Lang: ${lang}.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -550,11 +521,7 @@ export const getPesticideRotationAdvice = async (
 	query: string,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Resistance management rotation for: ${query}. Use official DAE codes. Lang: ${lang}.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -571,11 +538,7 @@ export const requestPesticidePrecisionParameters = async (
 	query: string,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `What field data is needed for 100% precision advisory for "${query}"? Return JSON list. Lang: ${lang}.`,
 		config: { responseMimeType: "application/json" },
@@ -588,11 +551,7 @@ export const performDeepPesticideAudit = async (
 	dynamicData: any,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Deep audit for "${query}" with parameters: ${JSON.stringify(dynamicData)}. Follow DAE protocols. Lang: ${lang}.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -611,11 +570,7 @@ export const getAISprayAdvisory = async (
 	weather: WeatherData,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Generate spray guide for ${pest} in ${crop}. Weather: ${JSON.stringify(weather)}. Lang: ${lang}.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -633,11 +588,7 @@ export const performSoilHealthAudit = async (
 	aez?: AEZInfo,
 	lang?: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Audit soil health: ${JSON.stringify(inputs)}. AEZ: ${aez?.name}. Use BARC-2024. Lang: ${lang}.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -650,11 +601,7 @@ export const requestSoilPrecisionParameters = async (
 	aezName: string,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `What extra data is needed for soil audit in ${aezName}? Inputs: ${JSON.stringify(inputs)}. Return JSON. Lang: ${lang}.`,
 		config: { responseMimeType: "application/json" },
@@ -668,11 +615,7 @@ export const performDeepSoilAudit = async (
 	dynamicData: any,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Deep soil audit for ${aezName}. Extra data: ${JSON.stringify(dynamicData)}. Follow BARC. Lang: ${lang}.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -681,11 +624,7 @@ export const performDeepSoilAudit = async (
 };
 
 export const getCropDiseaseInfo = async (crop: string) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Disease and pest info for: ${crop} in Bangladesh. Ground in AIS/BARI/BRRI. JSON format.`,
 		config: { responseMimeType: "application/json" },
@@ -705,11 +644,7 @@ export const getFieldMonitoringData = async (
 	lng: number,
 	aezName: string,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Satellite simulation for Field at ${lat}, ${lng}. AEZ: ${aezName}. Biomass and NDVI estimates.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -728,11 +663,7 @@ export const getLCCAnalysisSummary = async (
 	dose: string,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `LCC Value: ${lcc}, TSR: ${tsr}%, Dose: ${dose}. Rice N-management advice. Lang: ${lang}.`,
 	});
@@ -744,11 +675,7 @@ export const identifyPlantSpecimen = async (
 	mimeType: string,
 	lang: Language = "bn",
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: [
 			{
@@ -778,11 +705,7 @@ export const searchNearbySellers = async (
 	type: string,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-2.5-flash",
 		contents: `Find ${type} near lat: ${lat}, lng: ${lng} in Bangladesh. Respond in ${lang}.`,
 		config: {
@@ -801,11 +724,7 @@ export const searchNearbySellers = async (
 };
 
 export const getAgriFlashCards = async (topic: string) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `5 Agri Flashcards for: ${topic}. JSON format.`,
 		config: { responseMimeType: "application/json" },
@@ -818,11 +737,7 @@ export const getAICropSchedule = async (
 	today: string,
 	season: string,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `5-step calendar for ${crop} starting ${today} in ${season}. JSON format.`,
 		config: { responseMimeType: "application/json" },
@@ -831,11 +746,7 @@ export const getAICropSchedule = async (
 };
 
 export const getAgriMetaExplanation = async (query: string) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Explain Krishi AI logic for: ${query}. Mention BARI/BRRI data usage.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -844,11 +755,7 @@ export const getAgriMetaExplanation = async (query: string) => {
 };
 
 export const generateAgriQuiz = async (topic: string, lang: Language) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `5 quiz questions for: ${topic}. Lang: ${lang}. JSON format.`,
 		config: { responseMimeType: "application/json" },
@@ -857,11 +764,7 @@ export const generateAgriQuiz = async (topic: string, lang: Language) => {
 };
 
 export const searchEncyclopedia = async (query: string, lang: Language) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Define "${query}" for BD agriculture. Lang: ${lang}.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -878,11 +781,7 @@ export const getPersonalizedAgriAdvice = async (
 	crops: UserCrop[],
 	rank: string,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Personalized guide for "${rank}" farmer growing: ${JSON.stringify(crops)}. Site: dae.gov.bd.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -891,11 +790,7 @@ export const getPersonalizedAgriAdvice = async (
 };
 
 export const getAgriNews = async (lang: Language) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `5 agri news headlines for Bangladesh. Lang: ${lang}. JSON list.`,
 		config: {
@@ -907,11 +802,7 @@ export const getAgriNews = async (lang: Language) => {
 };
 
 export const getTrendingMarketPrices = async (lang: Language) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Market prices from dam.gov.bd. 5 items. JSON. Lang: ${lang}.`,
 		config: {
@@ -933,11 +824,7 @@ export const getAIYieldPrediction = async (
 	dynamicData: any,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Predict yield: ${crop}, AEZ: ${aez}, Soil: ${soil}, Practice: ${practice}. Data: ${JSON.stringify(dynamicData)}. Lang: ${lang}.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -951,11 +838,7 @@ export const getAIYieldPrediction = async (
 };
 
 export const getAgriPodcastSummary = async (topic: string) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: `Podcast script briefing for: ${topic}. Bangladeshi context.`,
 		config: { tools: [{ googleSearch: {} }] },
@@ -974,11 +857,7 @@ export const requestPrecisionParameters = async (
 	cropFamily: string,
 	lang: Language,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: [
 			{
@@ -1003,11 +882,7 @@ export const performDeepAudit = async (
 	lang: Language,
 	weather?: WeatherData,
 ) => {
-	const apiKey =
-		(import.meta as any).env?.VITE_GEMINI_API_KEY ||
-		(process as any).env?.API_KEY;
-	const ai = new GoogleGenAI({ apiKey });
-	const response = await ai.models.generateContent({
+	const response = await generateContentWithFallback({
 		model: "gemini-3-flash-preview",
 		contents: [
 			{
