@@ -1,8 +1,48 @@
 {
   "expo": {
+    "name": "Krishi AI",
+    "slug": "krishi-ai",
+    "version": "2.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0A8A1F"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.krishiai.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "ফসলের রোগ শনাক্ত করতে ক্যামেরা ব্যবহার করা হয়।",
+        "NSLocationWhenInUseUsageDescription": "আপনার এলাকার আবহাওয়া ও কৃষি তথ্য দেখাতে লোকেশন ব্যবহার করা হয়।",
+        "NSMicrophoneUsageDescription": "ভয়েস সার্চ ও AI কথোপকথনের জন্য মাইক্রোফোন ব্যবহার করা হয়।"
+      }
+    },
+    "android": {
+      "package": "com.krishiai.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0A8A1F"
+      },
+      "versionCode": 2,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.INTERNET"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "extra": {
       "eas": {
-        "projectId": "5896dc99-f7ab-42dc-8f49-94a218b1a7d8"
+        "projectId": "09f6f4f5-a4c4-438c-9bab-c113c43f0711"
       }
     }
   }
