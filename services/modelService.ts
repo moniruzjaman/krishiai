@@ -21,9 +21,9 @@ export interface AIModel {
 
 export const AVAILABLE_MODELS: Record<string, AIModel> = {
 	// Premium Tier Models (Priority 1 - Vision Capable)
-	"gemini-3-flash-preview": {
-		id: "gemini-3-flash-preview",
-		name: "Gemini 3 Flash Preview",
+	"gemini-2.0-flash": {
+		id: "gemini-2.0-flash",
+		name: "Gemini 2.0 Flash",
 		provider: "gemini",
 		supportsAudio: true,
 		isFree: false,
@@ -204,13 +204,13 @@ export function getOptimalModel(
 	});
 
 	// Return first candidate or default to premium Gemini
-	return filtered[0] || AVAILABLE_MODELS["gemini-3-flash-preview"];
+	return filtered[0] || AVAILABLE_MODELS["gemini-2.0-flash"];
 }
 
 // --- Cost-Aware Analyzer ---
 export class CostAwareAnalyzer {
 	private static readonly PREMIUM_MODELS = [
-		"gemini-3-flash-preview",
+		"gemini-2.0-flash",
 		"gemini-2.5",
 		"qwen-vl-max",
 		"kimi-vision",
@@ -455,7 +455,7 @@ Language: ${lang === "bn" ? "Bangla" : "English"}.`;
 			const ai = new GoogleGenAI({ apiKey });
 
 			const response = await generateContentWithFallback({
-				model: modelId === "gemini-2.5" ? "gemini-2.5-flash-preview" : "gemini-3-flash-preview",
+				model: modelId === "gemini-2.5" ? "gemini-2.5-flash" : "gemini-2.0-flash",
 				contents: [
 					{
 						parts: [

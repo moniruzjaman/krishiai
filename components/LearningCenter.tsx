@@ -9,7 +9,7 @@ import {
   decodeAudioData 
 } from '../services/geminiService';
 import { AgriQuizQuestion, Language, GroundingChunk } from '../types';
-import { useSpeech } from '../App';
+import { useSpeech } from '../krishi-ai-expo/App';
 
 interface LearningCenterProps {
   onBack: () => void;

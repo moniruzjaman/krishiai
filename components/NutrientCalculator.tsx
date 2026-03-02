@@ -5,7 +5,7 @@ import { getAIPlantNutrientAdvice, generateSpeech, decodeBase64, decodeAudioData
 import { CROPS_BY_CATEGORY } from '../constants';
 import { User, SavedReport, View, Language } from '../types';
 import ShareDialog from './ShareDialog';
-import { useSpeech } from '../App';
+import { useSpeech } from '../krishi-ai-expo/App';
 import GuidedTour, { TourStep } from './GuidedTour';
 import { ToolGuideHeader } from './ToolGuideHeader';
 

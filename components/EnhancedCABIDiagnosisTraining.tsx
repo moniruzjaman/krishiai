@@ -1,6 +1,6 @@
 // components/EnhancedCABIDiagnosisTraining.tsx
 import React, { useState, useEffect } from "react";
-import { useSpeech } from "../App";
+import { useSpeech } from "../krishi-ai-expo/App";
 import { getEnhancedRuleBasedAnalysis } from "../services/enhancedRuleBasedAnalyzer";
 import { csvLoader } from "../services/csvLoader";
 

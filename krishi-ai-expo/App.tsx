@@ -1,56 +1,56 @@
 // App.tsx (updated with OptimizedAnalyzer)
 import React, { useState, useEffect, useContext, createContext } from "react";
-import { View, User, SavedReport, Language, UserRole } from "./types";
-import { Hero } from "./components/Hero";
-import ToolsHub from "./components/ToolsHub";
-import ChatBot from "./components/ChatBot";
-import SearchTool from "./components/SearchTool";
-import Analyzer from "./components/Analyzer";
-import Weather from "./components/Weather";
-import NutrientCalculator from "./components/NutrientCalculator";
-import BiocontrolGuide from "./components/BiocontrolGuide";
-import SoilGuide from "./components/SoilGuide";
-import PlantDefenseGuide from "./components/PlantDefenseGuide";
-import PesticideExpert from "./components/PesticideExpert";
-import SoilExpert from "./components/SoilExpert";
-import YieldCalculator from "./components/YieldCalculator";
-import AIYieldPredictor from "./components/AIYieldPredictor";
-import { CropDiseaseLibrary } from "./components/CropDiseaseLibrary";
-import QRGenerator from "./components/QRGenerator";
-import FieldMonitoring from "./components/FieldMonitoring";
-import LeafColorChart from "./components/LeafColorChart";
-import LearningCenter from "./components/LearningCenter";
-import UserProfile from "./components/UserProfile";
-import About from "./components/About";
-import FlashcardView from "./components/FlashcardView";
-import TaskScheduler from "./components/TaskScheduler";
-import FAQ from "./components/FAQ";
-import CropCalendar from "./components/CropCalendar";
-import AgriPodcast from "./components/AgriPodcast";
-import EnhancedCABIDiagnosisTraining from "./components/EnhancedCABIDiagnosisTraining";
-import FieldMap from "./components/FieldMap";
-import { WeatherHorizontal } from "./components/WeatherHorizontal";
-import { MarketPriceHorizontal } from "./components/MarketPriceHorizontal";
-import { FeatureHighlights } from "./components/FeatureHighlights";
+import { View, User, SavedReport, Language, UserRole } from "../types";
+import { Hero } from "../components/Hero";
+import ToolsHub from "../components/ToolsHub";
+import ChatBot from "../components/ChatBot";
+import SearchTool from "../components/SearchTool";
+import Analyzer from "../components/Analyzer";
+import Weather from "../components/Weather";
+import NutrientCalculator from "../components/NutrientCalculator";
+import BiocontrolGuide from "../components/BiocontrolGuide";
+import SoilGuide from "../components/SoilGuide";
+import PlantDefenseGuide from "../components/PlantDefenseGuide";
+import PesticideExpert from "../components/PesticideExpert";
+import SoilExpert from "../components/SoilExpert";
+import YieldCalculator from "../components/YieldCalculator";
+import AIYieldPredictor from "../components/AIYieldPredictor";
+import { CropDiseaseLibrary } from "../components/CropDiseaseLibrary";
+import QRGenerator from "../components/QRGenerator";
+import FieldMonitoring from "../components/FieldMonitoring";
+import LeafColorChart from "../components/LeafColorChart";
+import LearningCenter from "../components/LearningCenter";
+import UserProfile from "../components/UserProfile";
+import About from "../components/About";
+import FlashcardView from "../components/FlashcardView";
+import TaskScheduler from "../components/TaskScheduler";
+import FAQ from "../components/FAQ";
+import CropCalendar from "../components/CropCalendar";
+import AgriPodcast from "../components/AgriPodcast";
+import EnhancedCABIDiagnosisTraining from "../components/EnhancedCABIDiagnosisTraining";
+import FieldMap from "../components/FieldMap";
+import { WeatherHorizontal } from "../components/WeatherHorizontal";
+import { MarketPriceHorizontal } from "../components/MarketPriceHorizontal";
+import { FeatureHighlights } from "../components/FeatureHighlights";
 import {
 	NewsTicker,
 	StatsSection,
 	FeaturedCourses,
 	MissionSection,
 	ContactFooter,
-} from "./components/HomeSections";
+} from "../components/HomeSections";
 import {
 	generateSpeech,
 	decodeBase64,
 	decodeAudioData,
-} from "./services/geminiService";
-import { Logo } from "./components/Logo";
-import { FarmerAvatar } from "./components/FarmerAvatar";
-import ShareDialog from "./components/ShareDialog";
-import { syncUserProfile, saveReportToSupabase } from "./services/supabase";
+} from "../services/geminiService";
+import { Logo } from "../components/Logo";
+import { FarmerAvatar } from "../components/FarmerAvatar";
+import ShareDialog from "../components/ShareDialog";
+import { syncUserProfile, saveReportToSupabase } from "../services/supabase";
 
 // Import OptimizedAnalyzer for direct user input analysis
-import OptimizedAnalyzer from "./components/OptimizedAnalyzer";
+import OptimizedAnalyzer from "../components/OptimizedAnalyzer";
 
 interface SpeechContextType {
 	playSpeech: (text: string, audioBase64?: string) => Promise<void>;

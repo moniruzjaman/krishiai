@@ -35,9 +35,13 @@ DEFAULT_ORIGINS = [
     "http://localhost:5174",
     "http://localhost:5175",
     "http://localhost:4173",
-    # Production
+    # Production Vercel
+    "https://krishiai-rbvdpdhfg-krishi-ai-team.vercel.app",
+    # Production custom domains
     "https://www.krishiai.live",
     "https://krishiai.live",
+    # Render
+    "https://krishi-ai-backend.onrender.com",
 ]
 
 # Get additional origins from environment and combine with defaults

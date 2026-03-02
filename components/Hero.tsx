@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Language } from '../types';
 import { generateAgriImage } from '../services/geminiService';
-import { useSpeech } from '../App';
+import { useSpeech } from '../krishi-ai-expo/App';
 
 interface HeroProps {
   onNavigate: (view: View) => void;

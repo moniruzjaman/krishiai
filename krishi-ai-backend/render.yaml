@@ -1,0 +1,41 @@
+# Render Blueprint - Krishi AI Backend
+# https://render.com/docs/blueprint-def
+
+services:
+  - type: web
+    name: krishi-ai-backend
+    runtime: python
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_NAME
+        value: Krishi AI Backend
+      - key: APP_VERSION
+        value: "4.0.0"
+      - key: DEBUG
+        value: "false"
+      - key: ENVIRONMENT
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "10000"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: HF_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://krishiai-rbvdpdhfg-krishi-ai-team.vercel.app,https://www.krishiai.live,https://krishiai.live
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+    autoDeploy: true
+    healthCheckPath: /health

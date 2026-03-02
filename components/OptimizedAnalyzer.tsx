@@ -1,6 +1,6 @@
 // components/OptimizedAnalyzer.tsx
 import React, { useState, useRef, useEffect } from "react";
-import { useSpeech } from "../App";
+import { useSpeech } from "../krishi-ai-expo/App";
 import { costAwareAnalyzer } from "../services/modelService";
 import { directAnalysisEnhancer } from "../services/directAnalysisEnhancer";
 import { AnalysisResult } from "../types";

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useSpeech } from '../App';
+import { useSpeech } from '../krishi-ai-expo/App';
 
 interface CABIDiagnosisTrainingProps {
   onBack: () => void;

@@ -13,7 +13,7 @@ import {
 import { View, GroundingChunk, WeatherData, SavedReport, Language } from '../types';
 import { getStoredLocation } from '../services/locationService';
 import DynamicPrecisionForm from './DynamicPrecisionForm';
-import { useSpeech } from '../App';
+import { useSpeech } from '../krishi-ai-expo/App';
 import GuidedTour, { TourStep } from './GuidedTour';
 import { ToolGuideHeader } from './ToolGuideHeader';
 

@@ -6,7 +6,7 @@ import { searchNearbySellers } from '../services/geminiService';
 import { detectCurrentAEZDetails, getStoredLocation, saveStoredLocation } from '../services/locationService';
 import ShareDialog from './ShareDialog';
 import FeedbackModal from './FeedbackModal';
-import { useSpeech } from '../App';
+import { useSpeech } from '../krishi-ai-expo/App';
 import { FarmerAvatar } from './FarmerAvatar';
 
 interface UserProfileProps {

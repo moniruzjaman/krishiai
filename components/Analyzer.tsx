@@ -12,7 +12,7 @@ import {
 import { CROPS_BY_CATEGORY } from "../constants";
 import ShareDialog from "./ShareDialog";
 import DynamicPrecisionForm from "./DynamicPrecisionForm";
-import { useSpeech } from "../App";
+import { useSpeech } from "../krishi-ai-expo/App";
 import GuidedTour, { TourStep } from "./GuidedTour";
 import { ToolGuideHeader } from "./ToolGuideHeader";
 
