@@ -11,6 +11,9 @@ export default defineConfig({
     // Map Vite env to process.env for Firebase/Supabase SDKs
     global: 'globalThis',
   },
+  optimizeDeps: {
+    exclude: ['@tensorflow/tfjs', '@tensorflow/tfjs-tflite']
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,

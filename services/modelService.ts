@@ -2,10 +2,11 @@ import { AnalysisResult, GroundingChunk } from "../types";
 import { GoogleGenAI, Type } from "@google/genai";
 import { decodeBase64, decodeAudioData, generateContentWithFallback } from "./geminiService";
 import { getRuleBasedAnalysis } from "./ruleBasedAnalyzer";
+import { classifyLocally } from "./localClassifierWeb";
 
 // --- Model Definitions ---
 export type ModelProvider = "gemini" | "openrouter" | "huggingface" | "local";
-export type ModelTier = "free" | "low-cost" | "premium";
+export type ModelTier = "free" | "low-cost" | "premium" | "rule-based";
 
 export interface AIModel {
 	id: string;
@@ -20,6 +21,18 @@ export interface AIModel {
 }
 
 export const AVAILABLE_MODELS: Record<string, AIModel> = {
+	// Local Vision Model (Priority 0 - Zero Cost)
+	"mobilenet-v2": {
+		id: "mobilenet-v2",
+		name: "MobileNetV2 (Local)",
+		provider: "local",
+		supportsAudio: false,
+		isFree: true,
+		tier: "free",
+		banglaCapable: false,
+		agricultureOptimized: true,
+	},
+
 	// Premium Tier Models (Priority 1 - Vision Capable)
 	"gemini-2.0-flash": {
 		id: "gemini-2.0-flash",
@@ -238,103 +251,141 @@ export class CostAwareAnalyzer {
 		},
 	): Promise<AnalysisResult> {
 		const { budget = "premium", lang = "bn", cropFamily = "General" } = options;
+		const attemptLog: { model: string; status: 'success' | 'failed'; reason?: string }[] = [];
 
-		// Step 1: Try premium models first (best vision capabilities)
+		// Step 0a: Try Local MobileNetV2 TFJS (Free, Zero Latency)
 		try {
-			const premiumModel = getOptimalModel("image-analysis", "premium", lang);
-			const premiumPrompt = this.getPremiumPrompt(
-				cropFamily,
-				lang,
-				options.query,
-			);
+			attemptLog.push({ model: "MobileNetV2 (Local)", status: "failed", reason: "Pending" });
+			const localResult = await classifyLocally(base64);
 
-			console.log(
-				`Using premium model: ${premiumModel.name} (${premiumModel.id})`,
-			);
+			if (localResult && localResult.isHighConfidence) {
+				attemptLog[attemptLog.length - 1] = { model: "MobileNetV2 (Local)", status: "success" };
 
-			const result = await this.analyzeWithModel(
-				premiumModel.id,
-				base64,
-				mimeType,
-				{
+				// Get Text-only advisory which is 80% cheaper!
+				const textModel = getOptimalModel("text-only", budget, lang);
+				attemptLog.push({ model: `${textModel.name} (Advisory)`, status: "failed", reason: "Pending" });
+
+				const sysInstruction = this.getPremiumPrompt(cropFamily, lang, `Identified disease: ${localResult.diseaseKey}`);
+				const advisoryResult = await this.analyzeWithModel(textModel.id, "", "", {
 					...options,
-					systemInstruction: premiumPrompt,
-				},
-			);
+					systemInstruction: sysInstruction,
+				});
 
-			// Validate confidence - if high enough, return immediately
-			if (result.confidence >= 75) {
-				return result;
-			}
+				attemptLog[attemptLog.length - 1] = { model: `${textModel.name} (Advisory)`, status: "success" };
 
-			// If confidence is low, try to enhance with additional analysis
-			if (result.confidence >= 50 && budget !== "free") {
-				return await this.enhanceAnalysis(result, options);
+				return {
+					...advisoryResult,
+					diagnosis: localResult.diseaseKey.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+					confidence: localResult.confidence,
+					tier: "free",
+					modelUsed: "Hybrid (Local+Cloud)",
+					attemptLog,
+				};
+			} else {
+				attemptLog[attemptLog.length - 1] = { model: "MobileNetV2 (Local)", status: "failed", reason: localResult ? "Low Confidence" : "Not Loaded" };
 			}
 		} catch (error: any) {
-			console.warn(
-				"Premium model failed, falling back to low-cost:",
-				error?.message || error,
-			);
+			attemptLog[attemptLog.length - 1] = { model: "MobileNetV2 (Local)", status: "failed", reason: error?.message || "Error" };
 		}
 
-		// Step 2: Fallback to low-cost model
-		try {
-			const lowCostModel = getOptimalModel("image-analysis", "low-cost", lang);
-			console.log(
-				`Using low-cost model: ${lowCostModel.name} (${lowCostModel.id})`,
-			);
+		// Step 1: Try premium models first (best vision capabilities)
+		if (budget !== "free") {
+			try {
+				const premiumModel = getOptimalModel("image-analysis", "premium", lang);
+				attemptLog.push({ model: premiumModel.name, status: "failed", reason: "Pending" });
 
-			const lowCostPrompt = this.getLowCostPrompt(
-				cropFamily,
-				lang,
-				options.query,
-			);
-			return await this.analyzeWithModel(lowCostModel.id, base64, mimeType, {
-				...options,
-				systemInstruction: lowCostPrompt,
-			});
-		} catch (error: any) {
-			console.error(
-				"Low-cost failed, falling back to free tier:",
-				error?.message || error,
-			);
+				const premiumPrompt = this.getPremiumPrompt(cropFamily, lang, options.query);
+				const result = await this.analyzeWithModel(premiumModel.id, base64, mimeType, {
+					...options,
+					systemInstruction: premiumPrompt,
+				});
+
+				// Validate confidence
+				if (result.confidence >= 50) {
+					attemptLog[attemptLog.length - 1] = { model: premiumModel.name, status: "success" };
+					return {
+						...result,
+						tier: "premium",
+						modelUsed: premiumModel.name,
+						attemptLog,
+					};
+				} else {
+					attemptLog[attemptLog.length - 1] = { model: premiumModel.name, status: "failed", reason: "Low Confidence" };
+				}
+			} catch (error: any) {
+				attemptLog[attemptLog.length - 1] = { model: attemptLog[attemptLog.length - 1].model, status: "failed", reason: error?.message || "API Error" };
+			}
+
+			// Step 2: Fallback to low-cost model
+			try {
+				const lowCostModel = getOptimalModel("image-analysis", "low-cost", lang);
+				attemptLog.push({ model: lowCostModel.name, status: "failed", reason: "Pending" });
+
+				const lowCostPrompt = this.getLowCostPrompt(cropFamily, lang, options.query);
+				const result = await this.analyzeWithModel(lowCostModel.id, base64, mimeType, {
+					...options,
+					systemInstruction: lowCostPrompt,
+				});
+
+				if (result.confidence >= 40) {
+					attemptLog[attemptLog.length - 1] = { model: lowCostModel.name, status: "success" };
+					return {
+						...result,
+						tier: "low-cost",
+						modelUsed: lowCostModel.name,
+						attemptLog,
+					};
+				} else {
+					attemptLog[attemptLog.length - 1] = { model: lowCostModel.name, status: "failed", reason: "Low Confidence" };
+				}
+			} catch (error: any) {
+				attemptLog[attemptLog.length - 1] = { model: attemptLog[attemptLog.length - 1].model, status: "failed", reason: error?.message || "API Error" };
+			}
 		}
 
 		// Step 3: Last resort - free tier models
 		try {
 			const freeModel = getOptimalModel("image-analysis", "free", lang);
-			console.log(`Using free-tier model: ${freeModel.name} (${freeModel.id})`);
+			attemptLog.push({ model: freeModel.name, status: "failed", reason: "Pending" });
 
-			const freePrompt = this.getFreeTierPrompt(
-				cropFamily,
-				lang,
-				options.query,
-			);
-			return await this.analyzeWithModel(freeModel.id, base64, mimeType, {
+			const freePrompt = this.getFreeTierPrompt(cropFamily, lang, options.query);
+			const result = await this.analyzeWithModel(freeModel.id, base64, mimeType, {
 				...options,
 				systemInstruction: freePrompt,
 			});
+
+			attemptLog[attemptLog.length - 1] = { model: freeModel.name, status: "success" };
+			return {
+				...result,
+				tier: "free",
+				modelUsed: freeModel.name,
+				attemptLog,
+			};
 		} catch (error: any) {
-			console.error("Free tier failed:", error?.message || error);
+			attemptLog[attemptLog.length - 1] = { model: attemptLog[attemptLog.length - 1].model, status: "failed", reason: error?.message || "API Error" };
 		}
 
 		// Step 4: Rule-based fallback (no API calls needed)
 		try {
-			console.log("Falling back to rule-based analyzer...");
+			attemptLog.push({ model: "Rule-Based Offline", status: "failed", reason: "Pending" });
 			const ruleBasedResult = getRuleBasedAnalysis(
 				options.cropFamily || "general",
 				options.query ? [options.query] : ["general"],
 			);
 
-			// Ensure minimum confidence for rule-based results
 			if (ruleBasedResult.confidence < 40) {
 				ruleBasedResult.confidence = 40;
 			}
 
-			return ruleBasedResult;
+			attemptLog[attemptLog.length - 1] = { model: "Rule-Based Offline", status: "success" };
+			return {
+				...ruleBasedResult,
+				tier: "rule-based",
+				modelUsed: "Local Rules DB",
+				attemptLog,
+			};
 		} catch (error: any) {
-			console.error("Rule-based fallback failed:", error);
+			attemptLog[attemptLog.length - 1] = { model: "Rule-Based Offline", status: "failed", reason: "Error" };
 		}
 
 		// Step 5: Last resort - return generic helpful message
@@ -342,12 +393,13 @@ export class CostAwareAnalyzer {
 			diagnosis: "এআই স্ক্যানার বর্তমানে উপলব্ধ নয়।",
 			category: "Other",
 			confidence: 30,
-			advisory:
-				"দয়া করে আপনার স্থানীয় কৃষি প্রসারণ অফিসের সাথে যোগাযোগ করুন। আপনি এখানে ছবি আপলোড করতে পারেন এবং পরে আবার চেষ্টা করতে পারেন।",
-			fullText:
-				"Krishi AI স্ক্যানার বর্তমানে উপলব্ধ নয়। দয়া করে স্থানীয় কৃষি প্রসারণ অফিসের সাথে যোগাযোগ করুন।",
+			advisory: "দয়া করে আপনার স্থানীয় কৃষি প্রসারণ অফিসের সাথে যোগাযোগ করুন। আপনি এখানে ছবি আপলোড করতে পারেন এবং পরে আবার চেষ্টা করতে পারেন।",
+			fullText: "Krishi AI স্ক্যানার বর্তমানে উপলব্ধ নয়। দয়া করে স্থানীয় কৃষি প্রসারণ অফিসের সাথে যোগাযোগ করুন।",
 			officialSource: "Krishi AI Fallback System",
 			groundingChunks: [],
+			tier: "rule-based",
+			modelUsed: "Error State",
+			attemptLog,
 		};
 	}
 
@@ -525,7 +577,7 @@ Language: ${lang === "bn" ? "Bangla" : "English"}.`;
 						{ role: "system", content: systemInstruction },
 						{
 							role: "user",
-							content: [
+							content: base64 ? [
 								{
 									type: "image_url",
 									image_url: { url: `data:${mimeType};base64,${base64}` },
@@ -534,6 +586,11 @@ Language: ${lang === "bn" ? "Bangla" : "English"}.`;
 									type: "text",
 									text: `Crop Context: ${cropFamily}. Observation: ${query || "Conduct full scientific audit"}.`,
 								},
+							] : [
+								{
+									type: "text",
+									text: `Crop Context: ${cropFamily}. Observation: ${query || "Conduct full scientific audit"}.`,
+								}
 							],
 						},
 					],

@@ -52,6 +52,9 @@ export interface AnalysisResult {
   fullText: string;
   officialSource?: string;
   groundingChunks?: GroundingChunk[];
+  tier?: 'premium' | 'low-cost' | 'free' | 'rule-based';
+  modelUsed?: string;
+  attemptLog?: { model: string; status: 'success' | 'failed'; reason?: string }[];
 }
 
 export interface FlashCard {

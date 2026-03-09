@@ -83,6 +83,7 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 	const [weather, setWeather] = useState<WeatherData | null>(null);
 	const [isLiveMode, setIsLiveMode] = useState(false);
 	const [showFlash, setShowFlash] = useState(false);
+	const [showLog, setShowLog] = useState(false);
 
 	const { playSpeech, stopSpeech, isSpeaking, speechEnabled } = useSpeech();
 	const [cropFamily, setCropFamily] = useState<string>("ধান");
@@ -950,6 +951,68 @@ const Analyzer: React.FC<AnalyzerProps> = ({
 						</div>
 
 						<div className="prose prose-slate max-w-none">
+							{/* Attempt Log & Tier Section */}
+							{result.tier && (
+								<div className="mb-8 font-sans">
+									<div className="flex items-center gap-3 flex-wrap mb-4">
+										<div className={`px-4 py-2 rounded-full font-black text-xs uppercase flex items-center gap-2 shadow-sm ${
+											result.tier === 'premium' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+											result.tier === 'free' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+											result.tier === 'low-cost' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' :
+											'bg-amber-100 text-amber-700 border border-amber-200'
+										}`}>
+											<span className={`w-2 h-2 rounded-full ${
+												result.tier === 'premium' ? 'bg-purple-500' :
+												result.tier === 'free' ? 'bg-blue-500' :
+												result.tier === 'low-cost' ? 'bg-indigo-500' :
+												'bg-amber-500'
+											}`}></span>
+											{result.tier === 'premium' ? '⭐ Premium AI' :
+											 result.tier === 'free' ? '🆓 Free AI Cascade' :
+											 result.tier === 'low-cost' ? '⚡ Low-Cost AI' :
+											 '📖 Rule-Based Engine'}
+										</div>
+										<div className="bg-slate-100 text-slate-600 px-4 py-2 rounded-full font-bold text-xs border border-slate-200 flex items-center gap-2">
+											<span>🤖</span> Model: {result.modelUsed}
+										</div>
+									</div>
+
+									{result.attemptLog && result.attemptLog.length > 0 && (
+										<div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden mt-4 shadow-sm">
+											<button 
+												onClick={() => setShowLog(!showLog)}
+												className="w-full flex justify-between items-center bg-white px-5 py-3 hover:bg-slate-50 transition-colors"
+											>
+												<span className="font-bold text-sm text-slate-700 flex items-center gap-2">
+													<span>📋</span> AI Engine Selection Details ({result.attemptLog.length} steps)
+												</span>
+												<span className="text-slate-400">{showLog ? '▲' : '▼'}</span>
+											</button>
+											
+											{showLog && (
+												<div className="p-4 bg-slate-50 border-t border-slate-200 max-h-48 overflow-y-auto">
+													<div className="space-y-3">
+														{result.attemptLog.map((log: any, idx: number) => (
+															<div key={idx} className="flex flex-col text-sm border-l-2 pl-3 border-transparent" style={{ borderColor: log.status === 'success' ? '#10b981' : '#f43f5e' }}>
+																<div className="flex items-center gap-2 font-bold break-words whitespace-normal">
+																	<span className="flex-shrink-0">{log.status === 'success' ? '✅' : '❌'}</span>
+																	<span className={`break-all ${log.status === 'success' ? 'text-emerald-700' : 'text-slate-600'}`}>
+																		{log.model}
+																	</span>
+																</div>
+																{log.reason && log.status !== 'success' && (
+																	<span className="text-xs text-rose-500 font-medium ml-6 mb-1">{log.reason}</span>
+																)}
+															</div>
+														))}
+													</div>
+												</div>
+											)}
+										</div>
+									)}
+								</div>
+							)}
+
 							{/* Diagnosis Section - Always show */}
 							<div className="mb-6">
 								<h3 className="text-2xl font-bold text-emerald-700 flex items-center gap-2">
