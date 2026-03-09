@@ -7,6 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#0A8A1F"
     },
@@ -17,6 +18,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.krishiai.app",
       "buildNumber": "1",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "NSCameraUsageDescription": "ফসলের রোগ শনাক্ত করতে ক্যামেরা ব্যবহার করা হয়।",
         "NSLocationWhenInUseUsageDescription": "আপনার এলাকার আবহাওয়া ও কৃষি তথ্য দেখাতে লোকেশন ব্যবহার করা হয়।",
@@ -26,6 +28,7 @@
     "android": {
       "package": "com.krishiai.app",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0A8A1F"
       },
       "versionCode": 2,
@@ -42,7 +45,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "09f6f4f5-a4c4-438c-9bab-c113c43f0711"
+        "projectId": "fc268b55-a3b2-4c1b-8b7b-f5ee611e86fb"
       }
     }
   }
