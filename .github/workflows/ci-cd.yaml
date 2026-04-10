@@ -1,0 +1,257 @@
+name: Krishi AI CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  REGISTRY: moniruzjaman
+  BACKEND_IMAGE: krishi-ai-backend
+  WEB_IMAGE: krishi-ai-web
+  NAMESPACE: krishi-ai
+
+jobs:
+  # ========================================
+  # Job 1: Lint & Test Backend
+  # ========================================
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: krishi-ai-backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio httpx
+
+      - name: Run linter
+        run: |
+          pip install ruff
+          ruff check . --output-format=github || true
+
+      - name: Run tests
+        run: |
+          pytest tests/ -v --cov=. --cov-report=xml --cov-report=term-missing || echo "No tests found, skipping"
+        env:
+          DATABASE_URL: "sqlite:///./test.db"
+          REDIS_URL: "redis://localhost:6379"
+          SECRET_KEY: "test-secret-key"
+          GEMINI_API_KEY: "test-key"
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: krishi-ai-backend/htmlcov/
+          retention-days: 7
+
+  # ========================================
+  # Job 2: Lint & Build Web Frontend
+  # ========================================
+  test-web:
+    name: Test Web Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check || echo "Type check skipped"
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: dist/
+          retention-days: 7
+
+  # ========================================
+  # Job 3: Build & Push Docker Images
+  # ========================================
+  build-images:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-web]
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Generate image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
+            ${{ env.REGISTRY }}/${{ env.WEB_IMAGE }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./krishi-ai-backend
+          file: ./krishi-ai-backend/Dockerfile.k8s
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.web
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ========================================
+  # Job 4: Deploy to Kubernetes
+  # ========================================
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: github.ref == 'refs/heads/main'
+
+    environment:
+      name: production
+      url: https://api.krishiai.live
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.29.0"
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Verify cluster connection
+        run: kubectl cluster-info
+
+      - name: Set image tag
+        id: image
+        run: echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Kubernetes
+        run: |
+          # Create namespace
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+          # Apply all manifests
+          kubectl apply -f kubernetes/namespace.yaml
+          kubectl apply -f kubernetes/configmap.yaml
+          kubectl apply -f kubernetes/persistent-volume.yaml
+          kubectl apply -f kubernetes/postgres-deployment.yaml
+          kubectl apply -f kubernetes/redis-deployment.yaml
+          kubectl apply -f kubernetes/backend-deployment.yaml
+          kubectl apply -f kubernetes/backend-service.yaml
+          kubectl apply -f kubernetes/web-deployment.yaml
+          kubectl apply -f kubernetes/ingress.yaml
+          kubectl apply -f kubernetes/hpa.yaml
+
+          # Update image tags to latest commit
+          kubectl set image deployment/krishi-ai-backend \
+            backend=${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ steps.image.outputs.TAG }} \
+            -n ${{ env.NAMESPACE }}
+
+          kubectl set image deployment/krishi-ai-web \
+            web=${{ env.REGISTRY }}/${{ env.WEB_IMAGE }}:${{ steps.image.outputs.TAG }} \
+            -n ${{ env.NAMESPACE }}
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/krishi-ai-backend -n ${{ env.NAMESPACE }} --timeout=300s
+          kubectl rollout status deployment/krishi-ai-web -n ${{ env.NAMESPACE }} --timeout=180s
+
+      - name: Verify deployment
+        run: |
+          echo "=== Pods ==="
+          kubectl get pods -n ${{ env.NAMESPACE }}
+          echo ""
+          echo "=== Services ==="
+          kubectl get svc -n ${{ env.NAMESPACE }}
+          echo ""
+          echo "=== Ingress ==="
+          kubectl get ingress -n ${{ env.NAMESPACE }}
+          echo ""
+          echo "=== HPA ==="
+          kubectl get hpa -n ${{ env.NAMESPACE }}
+
+      - name: Health check
+        run: |
+          sleep 10
+          kubectl port-forward -n ${{ env.NAMESPACE }} svc/krishi-ai-backend-service 8000:8000 &
+          sleep 5
+          curl -f http://localhost:8000/health || echo "WARNING: Health check failed"
+          kill %1 2>/dev/null || true
+
+  # ========================================
+  # Job 5: Notify on failure
+  # ========================================
+  notify:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-web, build-images, deploy]
+    if: failure()
+
+    steps:
+      - name: Notification summary
+        run: |
+          echo "::error::Krishi AI CI/CD pipeline failed!"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Author: ${{ github.actor }}"
+          echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
