@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output
+dist/
+build/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Kubernetes
+kubernetes/
+scripts/
+
+# Backend (not needed in web image)
+backend/
+krishi-ai-backend/
+krishi-ai-expo/
+app.krishiai/
+
+# Other
+.vercel/
+.github/
+.agents/
+data/
+tests/
+plans/
+project_backup/
+execution/
+directives/
+components/
+services/
+public/sw.js

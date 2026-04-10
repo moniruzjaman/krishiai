@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: krishi-ai-postgres
+  namespace: krishi-ai
+  labels:
+    app.kubernetes.io/name: krishi-ai-postgres
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: krishi-ai-platform
+    app.kubernetes.io/managed-by: kubeorch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: krishi-ai-postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: krishi-ai-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: krishi_ai
+            - name: POSTGRES_USER
+              value: krishi_user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: krishi-ai-secrets
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - krishi_user
+                - -d
+                - krishi_ai
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - krishi_user
+                - -d
+                - krishi_ai
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: krishi-ai-postgres-pvc

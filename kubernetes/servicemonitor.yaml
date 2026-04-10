@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: krishi-ai-backend-monitor
+  namespace: krishi-ai
+  labels:
+    app.kubernetes.io/name: krishi-ai-backend
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: krishi-ai-backend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

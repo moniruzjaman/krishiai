@@ -1,0 +1,59 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: krishi-ai-ingress
+  namespace: krishi-ai
+  labels:
+    app.kubernetes.io/name: krishi-ai
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/part-of: krishi-ai-platform
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://web.krishiai.live,https://krishiai.live"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, PUT, POST, DELETE, PATCH, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - krishiai.live
+        - web.krishiai.live
+        - api.krishiai.live
+      secretName: krishi-ai-tls-secret
+  rules:
+    - host: api.krishiai.live
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: krishi-ai-backend-service
+                port:
+                  number: 8000
+    - host: web.krishiai.live
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: krishi-ai-web-service
+                port:
+                  number: 80
+    - host: krishiai.live
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: krishi-ai-web-service
+                port:
+                  number: 80

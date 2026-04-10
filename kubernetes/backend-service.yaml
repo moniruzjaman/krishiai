@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: krishi-ai-backend-service
+  namespace: krishi-ai
+  labels:
+    app.kubernetes.io/name: krishi-ai-backend
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: krishi-ai-backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: krishi-ai
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  selector:
+    app: krishi-ai-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: krishi-ai
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+spec:
+  type: ClusterIP
+  selector:
+    app: krishi-ai-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: krishi-ai-web-service
+  namespace: krishi-ai
+  labels:
+    app.kubernetes.io/name: krishi-ai-web
+    app.kubernetes.io/component: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: krishi-ai-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

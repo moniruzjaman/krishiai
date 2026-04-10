@@ -1,0 +1,109 @@
+version: "3.9"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: krishi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: krishi_ai
+      POSTGRES_USER: krishi_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev-password-change-me}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U krishi_user -d krishi_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - krishi-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: krishi-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - krishi-network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./krishi-ai-backend
+      dockerfile: Dockerfile.k8s
+    container_name: krishi-backend
+    restart: unless-stopped
+    env_file:
+      - ./krishi-ai-backend/.env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      DATABASE_URL: postgresql://krishi_user:${POSTGRES_PASSWORD:-dev-password-change-me}@postgres:5432/krishi_ai
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./krishi-ai-backend:/app
+      - model_data:/app/models
+      - upload_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - krishi-network
+
+  # Web Frontend (Nginx)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: krishi-web
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - krishi-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  model_data:
+    driver: local
+  upload_data:
+    driver: local
+
+networks:
+  krishi-network:
+    driver: bridge

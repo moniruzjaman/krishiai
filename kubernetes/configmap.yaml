@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: krishi-ai-config
+  namespace: krishi-ai
+  labels:
+    app.kubernetes.io/name: krishi-ai
+    app.kubernetes.io/component: config
+data:
+  HOST: "0.0.0.0"
+  PORT: "8000"
+  DEBUG: "false"
+  DATABASE_HOST: "postgres-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "krishi_ai"
+  DATABASE_USER: "krishi_user"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  ALLOWED_ORIGINS: "https://web.krishiai.live,https://krishiai.live,https://api.krishiai.live"
+  CORS_ORIGINS: "https://web.krishiai.live,https://krishiai.live"
+  LOG_LEVEL: "info"
+  WORKERS: "4"
+  MAX_UPLOAD_SIZE: "10485760"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: krishi-ai-web-config
+  namespace: krishi-ai
+  labels:
+    app.kubernetes.io/name: krishi-ai-web
+    app.kubernetes.io/component: config
+data:
+  VITE_API_URL: "https://api.krishiai.live"
+  VITE_APP_NAME: "Krishi AI"
