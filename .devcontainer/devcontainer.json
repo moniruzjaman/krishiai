@@ -1,0 +1,14 @@
+{
+  "name": "🌾 KrishiAI Cloud Environment",
+  "dockerComposeFile": ["../docker/docker-compose.yml"],
+  "service": "backend",
+  "workspaceFolder": "/app",
+  "forwardPorts": [3000, 8000, 5050, 8081],
+  "portsAttributes": {
+    "3000": { "label": "Frontend Web App", "onAutoForward": "openBrowser" },
+    "8000": { "label": "Backend API", "onAutoForward": "openBrowser" },
+    "5050": { "label": "pgAdmin Database UI" },
+    "8081": { "label": "Redis Commander" }
+  },
+  "postCreateCommand": "echo '✅ KrishiAI environment is ready! Check the PORTS tab below to access your app.'"
+}
