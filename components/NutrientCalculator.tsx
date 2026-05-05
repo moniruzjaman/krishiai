@@ -43,7 +43,7 @@ const NutrientCalculator: React.FC<NutrientCalculatorProps> = ({ user, onBack, o
   const { playSpeech, stopSpeech, isSpeaking, speechEnabled } = useSpeech();
   const recognitionRef = useRef<any>(null);
 
-  const nutrientLoadingSteps = [ "সার সুপারিশমালা তৈরি হচ্ছে...", "মাটি ও ফসলের সমন্বয় হচ্ছে...", "পরিমাণ গণনা চলছে..." ];
+  const nutrientLoadingSteps = ["সার সুপারিশমালা তৈরি হচ্ছে...", "মাটি ও ফসলের সমন্বয় হচ্ছে...", "পরিমাণ গণনা চলছে..."];
 
   useEffect(() => {
     const tourDone = localStorage.getItem('agritech_tour_nutrient');
@@ -95,7 +95,7 @@ const NutrientCalculator: React.FC<NutrientCalculatorProps> = ({ user, onBack, o
     setIsLoading(true); setAdvice(null); setLoadingStep(0);
     try {
       const result = await getAIPlantNutrientAdvice(crop, aez, soil, areaSize, unit, lang);
-      setAdvice(result);
+      setAdvice(result || null);
       if (speechEnabled && result) playSpeech(result);
       if (onAction) onAction();
       if (onShowFeedback) onShowFeedback();
@@ -120,21 +120,21 @@ const NutrientCalculator: React.FC<NutrientCalculatorProps> = ({ user, onBack, o
     <div className="max-w-4xl mx-auto p-4 bg-gray-50 min-h-screen pb-32 font-sans">
       {showTour && <GuidedTour steps={NUTRIENT_TOUR} tourKey="nutrient" onClose={() => setShowTour(false)} />}
       {isShareOpen && advice && (
-        <ShareDialog 
-          isOpen={isShareOpen} 
-          onClose={() => setIsShareOpen(false)} 
-          title={`Fertilizer Recommendation: ${crop}`} 
-          content={advice} 
+        <ShareDialog
+          isOpen={isShareOpen}
+          onClose={() => setIsShareOpen(false)}
+          title={`Fertilizer Recommendation: ${crop}`}
+          content={advice}
         />
       )}
-      
-      <ToolGuideHeader 
+
+      <ToolGuideHeader
         title={lang === 'bn' ? 'সার ক্যালকুলেটর (BARC)' : 'Fertilizer Calculator (BARC)'}
         subtitle={lang === 'bn' ? 'জমির মাপ ও উর্বরতা অনুযায়ী সারের সঠিক বৈজ্ঞানিক মাত্রা।' : 'Precise scientific fertilizer dosage based on land size and soil fertility.'}
         protocol="BARC-FRG-2024"
         source="Bangladesh Agricultural Research Council"
         lang={lang}
-        onBack={onBack || (() => {})}
+        onBack={onBack || (() => { })}
         icon="⚖️"
         themeColor="emerald"
         guideSteps={lang === 'bn' ? [
@@ -160,11 +160,11 @@ const NutrientCalculator: React.FC<NutrientCalculatorProps> = ({ user, onBack, o
               </select>
             </div>
             <div>
-               <div className="flex justify-between items-center mb-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">জমির পরিমাণ</label><button onClick={() => toggleListening('areaSize')} className={`p-2 rounded-xl transition-all ${isListening && activeListeningId === 'areaSize' ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-50 text-slate-400 hover:text-emerald-600'}`}><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></button></div>
-               <div className="flex gap-2">
-                  <input type="number" value={areaSize} onChange={(e) => setAreaSize(parseFloat(e.target.value))} className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl py-4 px-5 focus:ring-2 focus:ring-[#0A8A1F] focus:outline-none font-bold text-gray-800 shadow-inner" />
-                  <div className="flex bg-slate-100 p-1 rounded-2xl"><button onClick={() => setUnit('bigha')} className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${unit === 'bigha' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}>বিঘা</button><button onClick={() => setUnit('decimal')} className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${unit === 'decimal' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}>শতাংশ</button></div>
-               </div>
+              <div className="flex justify-between items-center mb-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">জমির পরিমাণ</label><button onClick={() => toggleListening('areaSize')} className={`p-2 rounded-xl transition-all ${isListening && activeListeningId === 'areaSize' ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-50 text-slate-400 hover:text-emerald-600'}`}><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></button></div>
+              <div className="flex gap-2">
+                <input type="number" value={areaSize} onChange={(e) => setAreaSize(parseFloat(e.target.value))} className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl py-4 px-5 focus:ring-2 focus:ring-[#0A8A1F] focus:outline-none font-bold text-gray-800 shadow-inner" />
+                <div className="flex bg-slate-100 p-1 rounded-2xl"><button onClick={() => setUnit('bigha')} className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${unit === 'bigha' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}>বিঘা</button><button onClick={() => setUnit('decimal')} className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${unit === 'decimal' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}>শতাংশ</button></div>
+              </div>
             </div>
             <div id="nutrient-aez-info"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2 block">অঞ্চল (AEZ)</label><div className="flex gap-2"><input type="text" readOnly value={aez} className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs font-bold text-slate-500 shadow-inner" /><button onClick={handleDetectAEZ} disabled={isDetecting} className="bg-blue-50 text-blue-600 px-6 rounded-2xl border border-blue-100 active:scale-95 transition flex items-center justify-center"><span>{isDetecting ? '...' : '📍'}</span></button></div></div>
             <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex items-center space-x-3"><div className="text-xl">📜</div><p className="text-[9px] font-black text-blue-700 uppercase leading-relaxed">BARC-2024 নির্দেশিকা অনুযায়ী বৈজ্ঞানিক প্রোটোকল।</p></div>
@@ -180,13 +180,13 @@ const NutrientCalculator: React.FC<NutrientCalculatorProps> = ({ user, onBack, o
               <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-4 relative z-10">
                 <div><h3 className="text-xl font-black tracking-tight">অ্যাডভাইজরি রিপোর্ট</h3><div className="flex gap-2 mt-1"><span className="bg-emerald-600 text-white px-2 py-0.5 rounded text-[7px] font-black uppercase">BARC-2024</span><span className="bg-blue-600 text-white px-2 py-0.5 rounded text-[7px] font-black uppercase">Verified</span></div></div>
                 <div className="flex items-center space-x-2">
-                    <button onClick={() => setIsShareOpen(true)} className="p-4 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all active:scale-90 shadow-xl border border-white/10"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg></button>
-                    <button onClick={() => playSpeech(advice)} className={`p-4 rounded-full shadow-2xl transition-all ${isSpeaking ? 'bg-rose-500 text-white animate-pulse' : 'bg-white text-emerald-600'}`}>{isSpeaking ? '🔇' : '🔊'}</button>
+                  <button onClick={() => setIsShareOpen(true)} className="p-4 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all active:scale-90 shadow-xl border border-white/10"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg></button>
+                  <button onClick={() => playSpeech(advice)} className={`p-4 rounded-full shadow-2xl transition-all ${isSpeaking ? 'bg-rose-500 text-white animate-pulse' : 'bg-white text-emerald-600'}`}>{isSpeaking ? '🔇' : '🔊'}</button>
                 </div>
               </div>
               <div className="prose prose-invert max-w-none font-medium leading-relaxed whitespace-pre-wrap text-slate-300 text-lg">{advice}</div>
               <div className="mt-10 pt-8 border-t border-white/10 flex flex-col md:flex-row gap-4 items-center">
-                 <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-white/10 hover:bg-white/20 text-white py-4 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 w-full">সেভ (অডিওসহ)</button>
+                <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-white/10 hover:bg-white/20 text-white py-4 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 w-full">সেভ (অডিওসহ)</button>
               </div>
             </div>
           ) : (
@@ -197,16 +197,16 @@ const NutrientCalculator: React.FC<NutrientCalculatorProps> = ({ user, onBack, o
 
       {advice && !isLoading && (
         <div className="mt-8 bg-blue-50 rounded-[3rem] p-8 md:p-12 border-2 border-blue-200 shadow-inner animate-fade-in">
-           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-              <div className="flex-1 text-center md:text-left">
-                 <h4 className="text-xl font-black text-blue-900 mb-2 flex items-center justify-center md:justify-start"><span className="mr-3">🏺</span> আপনার কি পরবর্তী ধাপ জানা আছে?</h4>
-                 <p className="text-sm font-bold text-blue-700 leading-relaxed">সার সঠিক মাত্রায় প্রয়োগের পর আপনার মাটির স্বাস্থ্য প্রোফাইল এবং সম্ভাব্য ফলন যাচাই করা আপনার জন্য লাভজনক হবে।</p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-3">
-                 <button onClick={() => onNavigate?.(View.SOIL_EXPERT)} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">মাটি বিশ্লেষণ</button>
-                 <button onClick={() => onNavigate?.(View.AI_YIELD_PREDICTION)} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">ফলন পূর্বাভাস</button>
-              </div>
-           </div>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+            <div className="flex-1 text-center md:text-left">
+              <h4 className="text-xl font-black text-blue-900 mb-2 flex items-center justify-center md:justify-start"><span className="mr-3">🏺</span> আপনার কি পরবর্তী ধাপ জানা আছে?</h4>
+              <p className="text-sm font-bold text-blue-700 leading-relaxed">সার সঠিক মাত্রায় প্রয়োগের পর আপনার মাটির স্বাস্থ্য প্রোফাইল এবং সম্ভাব্য ফলন যাচাই করা আপনার জন্য লাভজনক হবে।</p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button onClick={() => onNavigate?.(View.SOIL_EXPERT)} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">মাটি বিশ্লেষণ</button>
+              <button onClick={() => onNavigate?.(View.AI_YIELD_PREDICTION)} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">ফলন পূর্বাভাস</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

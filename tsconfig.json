@@ -15,7 +15,19 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["./**/*.ts", "./**/*.tsx"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "project_backup",
+    "krishiai-frontend",
+    "**/*.bak",
+    ".vercel",
+    ".github",
+    ".tmp",
+    ".venv"
+  ]
 }

@@ -1,27 +1,27 @@
 
 import { initializeApp, getApp, getApps, FirebaseApp } from "firebase/app";
-import { 
-  getAuth, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  onAuthStateChanged, 
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
   signOut,
   User as FirebaseUser,
   Auth
 } from "firebase/auth";
 
 /**
- * Validated Firebase Configuration
- * Note: apiKey is strictly obtained from process.env.API_KEY as per system requirements.
- * Other fields match the specific Firebase Project 'agriadvisoryai' provided by the user.
+ * Updated Firebase Configuration
+ * Using fertilizer-dealer project credentials
  */
 const firebaseConfig = {
-  apiKey: process.env.API_KEY,
-  authDomain: "agriadvisoryai.firebaseapp.com",
-  projectId: "agriadvisoryai",
-  storageBucket: "agriadvisoryai.firebasestorage.app",
-  messagingSenderId: "498163867458",
-  appId: "1:498163867458:web:d53de085f0f56acbc472db"
+  apiKey: "AIzaSyCMRA3_SceO-iemeiMHh0Cyhu9T1BTd_-M",
+  authDomain: "fertilizer-dealer.firebaseapp.com",
+  databaseURL: "https://fertilizer-dealer.firebaseio.com",
+  projectId: "fertilizer-dealer",
+  storageBucket: "fertilizer-dealer.firebasestorage.app",
+  messagingSenderId: "798390434310",
+  appId: "1:798390434310:web:7483725f6a65d59a286187"
 };
 
 let app: FirebaseApp;
