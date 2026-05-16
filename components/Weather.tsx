@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 /* Removed missing generateGroundedWeatherReport from import to fix error on line 3 */
 import { getLiveWeather, generateSpeech, decodeBase64, decodeAudioData } from '../services/geminiService';
-import { WeatherData, ForecastDay, GroundingChunk } from '../types';
+import { WeatherData, ForecastDay, Language } from '../types';
 import { saveStoredLocation } from '../services/locationService';
 import {
   ComposedChart,
@@ -26,7 +26,7 @@ const toBanglaNumber = (val: any) => {
 
 interface WeatherProps {
   onBack?: () => void;
-  lang: 'bn' | 'en';
+  lang: Language;
 }
 
 const WEATHER_TOUR: TourStep[] = [

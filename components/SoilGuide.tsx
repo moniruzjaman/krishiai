@@ -83,7 +83,7 @@ const SoilGuide: React.FC<SoilGuideProps> = ({ onAction, onShowFeedback, onBack,
 
     try {
       const result = await interpretSoilReportAI(inputs);
-      setAdvice(result);
+      setAdvice(result || null);
       
       if (result) {
         playTTS(result);

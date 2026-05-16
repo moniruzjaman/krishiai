@@ -76,16 +76,16 @@ const BiocontrolGuide: React.FC<BiocontrolGuideProps> = ({ onAction, onShowFeedb
     setAdvice(null);
 
     if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
     }
     if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume();
+      audioContextRef.current.resume();
     }
 
     try {
       const result = await getBiocontrolExpertAdvice(query);
-      setAdvice(result);
-      
+      setAdvice(result || null);
+
       if (result) {
         playTTS(result);
       }
@@ -130,9 +130,9 @@ const BiocontrolGuide: React.FC<BiocontrolGuideProps> = ({ onAction, onShowFeedb
     const textToSpeak = textOverride || advice;
     if (!textToSpeak) return;
 
-    if (isPlaying && !textOverride) { 
-        stopTTS(); 
-        return; 
+    if (isPlaying && !textOverride) {
+      stopTTS();
+      return;
     }
 
     try {
@@ -182,26 +182,26 @@ const BiocontrolGuide: React.FC<BiocontrolGuideProps> = ({ onAction, onShowFeedb
         <h2 className="text-xl font-black text-gray-800 mb-2">নির্দিষ্ট পোকার জৈবিক সমাধান খুঁজুন</h2>
         <p className="text-sm text-gray-400 font-medium mb-8 uppercase tracking-widest">AI Expert Advisor</p>
         <div className="flex flex-col md:flex-row gap-4">
-           <div className="flex-1 relative">
-             <input 
-               type="text" 
-               value={query} 
-               onChange={(e) => setQuery(e.target.value)}
-               placeholder="যেমন: ধানের মাজরা পোকা..." 
-               className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-5 px-8 pr-16 focus:ring-2 focus:ring-[#0A8A1F] focus:outline-none font-black text-xl text-gray-700 shadow-inner"
-               onKeyDown={(e) => e.key === 'Enter' && handleAskExpert()}
-             />
-             <button 
-               onClick={toggleListening}
-               className={`absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 text-slate-400 hover:text-emerald-600'}`}
-               title="ভয়েস ইনপুট"
-             >
-               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-             </button>
-           </div>
-           <button onClick={handleAskExpert} disabled={isLoading} className="bg-gray-900 text-white font-black px-12 py-5 rounded-2xl shadow-2xl active:scale-95 transition-all text-lg disabled:bg-gray-300">
-             {isLoading ? 'খুঁজছে...' : 'বিশেষজ্ঞের মত'}
-           </button>
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="যেমন: ধানের মাজরা পোকা..."
+              className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-5 px-8 pr-16 focus:ring-2 focus:ring-[#0A8A1F] focus:outline-none font-black text-xl text-gray-700 shadow-inner"
+              onKeyDown={(e) => e.key === 'Enter' && handleAskExpert()}
+            />
+            <button
+              onClick={toggleListening}
+              className={`absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 text-slate-400 hover:text-emerald-600'}`}
+              title="ভয়েস ইনপুট"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+            </button>
+          </div>
+          <button onClick={handleAskExpert} disabled={isLoading} className="bg-gray-900 text-white font-black px-12 py-5 rounded-2xl shadow-2xl active:scale-95 transition-all text-lg disabled:bg-gray-300">
+            {isLoading ? 'খুঁজছে...' : 'বিশেষজ্ঞের মত'}
+          </button>
         </div>
       </div>
 
@@ -209,15 +209,15 @@ const BiocontrolGuide: React.FC<BiocontrolGuideProps> = ({ onAction, onShowFeedb
         <div className="bg-white rounded-[3rem] p-10 shadow-2xl animate-fade-in border-4 border-green-500/30 mb-12 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full -mr-16 -mt-16"></div>
           <div className="flex justify-between items-center mb-8 border-b border-gray-50 pb-4 relative z-10">
-             <h3 className="font-black text-gray-800 text-xl">প্রাকৃতিক দমন পদ্ধতি</h3>
-             <div className="flex items-center space-x-2">
-                <button onClick={() => playTTS()} className={`p-4 rounded-full shadow-2xl transition-all ${isPlaying ? 'bg-red-500 text-white animate-pulse' : 'bg-[#0A8A1F] text-white'}`}>
-                    {isPlaying ? '🔊' : '🔈'}
-                </button>
-                <button onClick={handleSaveReport} disabled={isSaving} className="p-4 rounded-full bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all active:scale-90 disabled:opacity-50" title="সেভ করুন">
-                    {isSaving ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>}
-                </button>
-             </div>
+            <h3 className="font-black text-gray-800 text-xl">প্রাকৃতিক দমন পদ্ধতি</h3>
+            <div className="flex items-center space-x-2">
+              <button onClick={() => playTTS()} className={`p-4 rounded-full shadow-2xl transition-all ${isPlaying ? 'bg-red-500 text-white animate-pulse' : 'bg-[#0A8A1F] text-white'}`}>
+                {isPlaying ? '🔊' : '🔈'}
+              </button>
+              <button onClick={handleSaveReport} disabled={isSaving} className="p-4 rounded-full bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all active:scale-90 disabled:opacity-50" title="সেভ করুন">
+                {isSaving ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>}
+              </button>
+            </div>
           </div>
           <div className="prose prose-slate max-w-none text-gray-700 font-medium leading-relaxed whitespace-pre-wrap first-letter:text-5xl first-letter:font-black first-letter:mr-3 first-letter:float-left first-letter:text-[#0A8A1F]">
             {advice}
@@ -238,7 +238,7 @@ const BiocontrolGuide: React.FC<BiocontrolGuideProps> = ({ onAction, onShowFeedb
         {content.map((item) => (
           <div key={item.id} className="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-gray-50 group hover:shadow-xl transition-all">
             <div className="h-56 overflow-hidden">
-               <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+              <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
             </div>
             <div className="p-8">
               <h3 className="font-black text-gray-800 text-xl mb-2">{item.title}</h3>
