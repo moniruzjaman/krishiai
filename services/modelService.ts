@@ -150,9 +150,9 @@ export function getOptimalModel(
 	// Keep strict tier preference for each budget mode.
 	// This prevents low-cost/free fallback from repeatedly selecting premium models.
 	const tierPreference: Record<ModelTier, ModelTier[]> = {
-		premium: ["premium", "low-cost", "free"],
-		"low-cost": ["low-cost", "free", "premium"],
-		free: ["free", "low-cost", "premium"],
+		premium: ["premium", "low-cost", "free", "rule-based"],
+		"low-cost": ["low-cost", "free", "rule-based", "premium"],
+		free: ["free", "rule-based", "low-cost", "premium"],
 	};
 
 	let filtered = [...candidates];
@@ -167,7 +167,9 @@ export function getOptimalModel(
 				model.id.includes("gemini") ||
 				model.id.includes("qwen") ||
 				model.id.includes("kimi") ||
-				model.id.includes("gpt-4"),
+				model.id.includes("gpt-4") ||
+				model.id.includes("mobilenet") ||
+				model.provider === "local",
 		);
 	}
 
